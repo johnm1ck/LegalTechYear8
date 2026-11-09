@@ -22,3 +22,6 @@ Legal and food-handling terms are illustrative drafts awaiting specialist review
 - Screenshots are generated in ignored `screenshots/`.
 - Preview server could not start in the agent's restricted execution environment (socket permission denied). Start `npm run dev` in your own terminal to view the site.
 - Uploaded files are represented by metadata only; original file contents are not persisted. Downloaded dispute summaries explicitly state that original attachments must be collected separately.
+
+## Agent handoff
+อ่าน [CONTEXT.md](CONTEXT.md) สำหรับบริบทผลิตภัณฑ์ ข้อกำหนดผู้ใช้ สถานะฟีเจอร์ และข้อจำกัด จากนั้นอ่าน [ARCHITECTURE.md](ARCHITECTURE.md) สำหรับ stack ที่ใช้จริง โครงสร้างโค้ด state สูตรคะแนน และคำสั่งทดสอบ
