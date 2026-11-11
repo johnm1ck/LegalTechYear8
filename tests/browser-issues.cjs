@@ -9,22 +9,36 @@ const root = path.resolve(__dirname, '..');
 const types = {'.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png'};
 
 async function agreeAndShip(p) {
-  await p.getByRole('button', {name: 'เริ่มสาธิตในฐานะผู้ซื้อ'}).click();
+  await p.locator('.role-card[data-action="role:buyer"]').click();
   await p.locator('[data-action="choose:1"]').first().click();
   await p.locator('#consent').check();
   await p.locator('[data-action="sign"]').click();
-  await p.locator('[data-action="switch"]').first().click();
+  await p.getByRole('button', {name: 'ไปที่การส่งมอบ'}).click({timeout: 10000});
+  await p.locator('#receive-form').waitFor({timeout: 10000}); // seller ships on their own
+}
+
+// Seller-side journey: the buyer chooses, confirms, inspects and accepts on their own.
+async function sellerJourney(p) {
+  await p.locator('.role-card[data-action="role:seller"]').click();
+  await p.locator('#offer-form textarea[name="terms"]').fill('ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง โดยรับผิดชอบค่าขนส่ง');
+  await p.locator('#offer-form button[type="submit"]').click();
+  assert(await p.locator('.badge.wait').isVisible(), 'offer waits for buyer');
+  await p.getByRole('button', {name: 'ไปที่ข้อตกลง'}).click({timeout: 10000});
   await p.locator('#consent').check();
   await p.locator('[data-action="sign"]').click();
-  await p.locator('[data-action="page:delivery"]').first().click();
+  await p.getByRole('button', {name: 'ไปที่การส่งมอบ'}).click({timeout: 10000});
+  await p.locator('#ship-form input[name="weight"]').fill('95');
   await p.locator('#ship-form button[type="submit"]').click();
-  await p.locator('[data-action="role:buyer"]').first().click();
+  await p.locator('#response-form').waitFor({timeout: 10000}); // buyer inspects and reports the shortage
+  assert(await p.getByText('สินค้าขาด 5 กิโลกรัม', {exact: true}).isVisible(), 'seller sees shortage');
+  await p.locator('#response-form button').click();
+  await p.getByText('ตกลงแนวทางแก้ไขแล้ว', {exact: true}).waitFor({timeout: 10000});
 }
 
 async function restart(p) {
   await p.evaluate(() => localStorage.clear());
   await p.reload();
-  await p.getByRole('heading', {name: 'ผู้ซื้อ / SME', exact: true}).waitFor();
+  await p.locator('.role-card').first().waitFor();
 }
 
 (async () => {
@@ -43,7 +57,7 @@ async function restart(p) {
     // 1. Corrupt or outdated saved state falls back to a fresh demo.
     await p.evaluate(() => localStorage.setItem('supplytrust-v1', '{"role":"buyer","offers":"broken"}'));
     await p.reload();
-    await p.getByRole('heading', {name: 'ผู้ซื้อ / SME', exact: true}).waitFor();
+    await p.locator('.role-card').first().waitFor();
 
     // 2. Temperature above 4 °C with full weight.
     await agreeAndShip(p);
@@ -56,7 +70,7 @@ async function restart(p) {
 
     // 3. Seller document panel follows the selected supplier (Siam Fresh: 4/4).
     await p.locator('[data-action="page:offers"]').first().click();
-    assert.equal(await p.locator('.stack .status-list .tag.green').count(), 4, 'seller docs should be 4/4');
+    assert.equal(await p.locator('.docs-list .badge.ok').count(), 4, 'seller docs should be 4/4');
     assert.match(await p.locator('#offer-form textarea[name="terms"]').inputValue(), /24 ชั่วโมง/);
 
     // 4. Over-delivery.
@@ -74,17 +88,21 @@ async function restart(p) {
     await p.locator('[data-action="role:seller"]').first().click();
     assert.match(await p.locator('#response-form textarea').inputValue(), /จัดส่งสินค้าเพิ่มเติม 5 กิโลกรัม/);
 
+    // 5b. Full seller-side journey with the buyer acting on their own.
+    await restart(p);
+    await sellerJourney(p);
+
     // 6. Mobile card shows a readable label for unknown distance.
     await restart(p);
     await p.setViewportSize({width: 390, height: 844});
-    await p.getByRole('button', {name: 'เริ่มสาธิตในฐานะผู้ซื้อ'}).click();
-    await p.locator('summary').filter({hasText: 'เครื่องมือการสาธิต'}).click();
+    await p.locator('.role-card[data-action="role:buyer"]').click();
+    await p.locator('.demo-menu summary').click();
     await p.locator('#scenario').selectOption('missing');
     const mobile = await p.locator('.mobile-offers').innerText();
     assert(mobile.includes('ไม่ทราบระยะทาง') && !mobile.includes('ไม่ทราบ กม.'), 'mobile unknown distance label');
 
     assert.deepEqual(errors, []);
-    console.log('PASS Firefox issues: saved-state recovery; temperature, over-delivery and shortage disputes; seller docs/terms; mobile unknown distance; no page errors.');
+    console.log('PASS Firefox issues: saved-state recovery; temperature, over-delivery and shortage disputes; seller docs/terms; seller-side journey with buyer auto-actions; mobile unknown distance; no page errors.');
   } finally {
     await browser.close();
   }

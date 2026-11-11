@@ -9,7 +9,7 @@
 แผนช่วงแรกเคยเสนอ React + Vite แต่ไม่ได้ใช้ในการสร้างจริง อย่าอ้างว่าโปรเจกต์นี้มี React, Vite, TypeScript, Tailwind หรือระบบ build
 
 - Runtime ในเบราว์เซอร์: JavaScript, DOM APIs, localStorage, HTML forms, `<dialog>`, Blob download และ `window.print()`
-- Styling: CSS custom properties, Grid, Flexbox, media queries และ dark-mode class
+- Styling: CSS custom properties (brand palette + role tokens), Grid, Flexbox, media queries ไม่มีโหมดมืด
 - Font: Noto Sans Thai จาก Google Fonts พร้อม Tahoma/sans-serif fallback
 - Icons: SVG path ที่กำหนดในโค้ด ไม่ใช้ icon package
 - Development server: `scripts/serve.mjs` (Node.js built-in `http` ไม่มี dependency) ผ่าน `npm run dev` ใช้ได้ทั้ง Windows, macOS และ Linux
@@ -26,11 +26,11 @@ LegalTechYear8/              # root ของ Git repository
 ├── index.html              # Thai document, stylesheet, #app และ module entry
 ├── app.js                  # state, rendering, events, forms และ demo workflow
 ├── logic.js                # initialOffers, defaults และ pure rank()
-├── styles.css              # design tokens, layout, responsive, dark และ print
+├── styles.css              # design tokens, layout, responsive และ print
 ├── package.json            # type: module; dev และ test scripts
 ├── scripts/
 │   └── serve.mjs           # static server สำหรับ npm run dev (เปลี่ยนพอร์ตด้วย PORT)
-├── color-reference.png     # สำเนาภาพอ้างอิงสีของผู้ใช้
+├── color-reference.png     # ภาพอ้างอิงสีม่วงชุดเดิม (เลิกใช้ ดู §8)
 ├── tests/
 │   ├── scoring.test.js     # สูตรและ edge cases 6 กรณี
 │   ├── browser-firefox.cjs # browser workflow และ screenshots
@@ -72,11 +72,11 @@ server ทำงานเฉพาะขณะที่คำสั่ง `npm r
 
 Storage keys:
 - `supplytrust-v1`: JSON state ทั้งเดโม
-- `supplytrust-theme`: light/dark preference
+- `supplytrust-theme`: เลิกใช้แล้ว (ไม่มีโหมดมืด) แอปลบ key นี้เมื่อโหลด
 
 `render()` แทนที่ `#app.innerHTML` แล้วเรียก `bindForms()` และ `save()` ต้อง bind form listeners หลัง render ทุกครั้ง ส่วน click/input/change หลักใช้ event delegation บน `#app`
 
-แถบเลื่อนน้ำหนักอัปเดตเฉพาะ `#comparison` และตัวเลขกำกับ เพื่อไม่ทำลาย input ระหว่างลาก อย่าเปลี่ยนกลับไป render ทั้งหน้าในทุก input event
+แถบเลื่อนน้ำหนักอัปเดตเฉพาะ `#advice`, `#comparison`, `#presets` และตัวเลขกำกับ เพื่อไม่ทำลาย input ระหว่างลาก อย่าเปลี่ยนกลับไป render ทั้งหน้าในทุก input event
 
 ไม่มี URL router หรือ deep links; การเปลี่ยนหน้าใช้ state ปุ่มหน้าแรกกลับไปเลือกบทบาทโดยไม่ล้างข้อมูล ใช้เครื่องมือเริ่มใหม่เพื่อล้าง state เดโม
 
@@ -85,8 +85,8 @@ Storage keys:
 | งาน | จุดเริ่มอ่าน |
 | --- | --- |
 | หน้าเลือกบทบาท | `landing()`, `header()` |
-| เมนูและสถานการณ์ | `sidebar()`, delegated change listener |
-| หน้าผู้ซื้อ | `request()`, `offersPage()`, `offersForScenario()`, `tags()` |
+| เมนูเดโม ขั้นตอน และสถานการณ์ | `demoMenu()`, `steps()`, delegated change listener |
+| หน้าผู้ซื้อ | `offersPage()`, `advice()`, `presets()`, `comparison()`, `offersForScenario()`, `tags()` |
 | หน้าผู้ขาย | `supplierPage()`, handler ของ `#offer-form` |
 | ร่างข้อตกลง | `contractPage()`, `revision()`, actions choose/freight/sign |
 | การส่งและปัญหา | `deliveryPage()`, handlers ship/receive/response และ actions issue/resolve |
@@ -129,19 +129,31 @@ Storage keys:
 6. หากเลือกผู้ขายที่อายุไม่ผ่านเกณฑ์ มีคำเตือนและช่องรับทราบเพิ่มตามสเปกต้นแบบ
 7. หลังเริ่มส่งมอบ บางการแก้ข้อเสนอ/ร่างถูกปิด ต้องเริ่มเดโมใหม่หากเปลี่ยนดีล
 8. การยอมรับแนวทางแก้ไขยังไม่ใช่การยืนยันว่าได้สินค้าส่วนที่ขาดครบแล้ว
+9. คู่สัญญาอีกฝ่ายจำลองการตอบเอง ไม่มีปุ่ม "สลับเป็น…" ใน flow: `counterpartTask()` คืนงานถัดไปของอีกฝ่ายจาก state ปัจจุบัน และ `scheduleCounterpart()` (เรียกหลังทุก render) ตั้งเวลา `REPLY_MS` 3.5 วินาที ถ้า state เปลี่ยนหรือผู้ใช้สลับบทบาทก่อนถึงเวลา งานจะถูกยกเลิก งานที่มี: ผู้ซื้อเลือกข้อเสนอของผู้ขาย (select), อีกฝ่ายยืนยันข้อตกลงฉบับเดียวกัน (sign), ผู้ขายส่งสินค้า 100 กก. (ship), ผู้ขายตอบปัญหาด้วย `issueInfo().remedy` (respond), ผู้ซื้อตรวจรับด้วยน้ำหนักที่ผู้ขายส่งและ 3 °C (receive ผ่าน `recordReceipt()`), ผู้ซื้อยอมรับแนวทางแก้ไข (accept) ส่วน action `ask-freight` ให้ผู้ขายยืนยันค่าขนส่งหลัง 3 วินาที ตัวจับเวลาไม่ persist ถ้ารีโหลดระหว่างรอจะเริ่มนับใหม่
 
 เงื่อนไขข้างต้นเป็นพฤติกรรมใน UI ของต้นแบบ ไม่ใช่ระบบ authorization หรือหลักฐานที่ป้องกันการแก้ไขจากภายนอก
 
 ## 8. Design system และ responsive
 
-CSS variables หลัก: `--paper`, `--bg`, `--ink`, `--muted`, `--line`, `--primary`, `--tint`, `--green`, `--rose`, `--red`
+แนวทาง (ตกลงกับผู้ใช้ 2026-11-11): "Apple white" สีจาก brand palette ของผู้ใช้ ไม่มีโหมดมืด
 
-- Light: พื้นเกือบขาว ม่วงหลัก `#735385`, พื้นม่วงอ่อน `#f1ebf7`, ชมพูอ่อน `#f6edf1`
-- Dark: class `.dark` บน documentElement เปลี่ยน variables พร้อม overrides บางสถานะ
-- Breakpoints ปัจจุบัน: 1600, 1150, 800, 540 px
-- จอใหญ่: sidebar + content; ตารางข้อเสนอเลื่อนภายในกรอบได้
-- ไม่เกิน 800 px: เมนูหลักด้านบน; ไม่เกิน 540 px: การ์ดผู้ขายแทนตารางและคอลัมน์เดียวในฟอร์ม
-- มี `prefers-reduced-motion`, `:focus-visible`, skip link, Thai `lang` และ print styles
+Token ที่ `:root` ใน `styles.css` มี 2 ชั้น:
+- Brand palette ตามที่ผู้ใช้กำหนด: `--brand-primary #E4012D`, `--brand-crimson`, `--brand-maroon`, `--brand-bright`, `--accent-orange`, `--accent-amber`, `--accent-yellow`, `--surface-cream`, `--surface-beige`, `--neutral-gray`, `--text-primary`, `--text-secondary`, `--bg`
+- Role tokens ที่ component ใช้: `--page #F5F5F7`, `--surface`, `--fill`, `--line`, `--ink`, `--muted`, `--accent`, `--warn-bg/ink`, `--bad-bg/ink`, `--success/-tint`
+- `--success #1A7F45` เป็นสีเดียวที่อยู่นอก palette (ผู้ใช้อนุมัติ) ใช้เฉพาะสถานะยืนยันแล้ว/ตรวจแล้ว/ขั้นตอนเสร็จ
+
+กติกาการใช้สี:
+- แดงใช้เฉพาะปุ่มหลัก ขั้นตอนปัจจุบัน ผู้ขายที่แนะนำ และโลโก้ อย่าใช้แดงกับลิงก์หรือข้อความทั่วไป
+- ข้อผิดพลาด/ไม่ผ่านเกณฑ์ใช้ maroon บนพื้นชมพูอ่อน คำเตือนใช้ข้อความน้ำตาลบนพื้น cream เหลือง/amber ห้ามใช้เป็นสีข้อความ
+- Font: system stack (SF Pro + Thai system font บน Apple) แล้ว fallback เป็น Noto Sans Thai
+
+Layout:
+- Header แบบ sticky blur: โลโก้, segmented control ผู้ซื้อ|ผู้ขาย, เมนู "เดโม" (`demoMenu()`) ที่รวมสถานการณ์ เริ่มใหม่ และข้อความว่าข้อมูลเป็นข้อมูลสมมติ (ข้อความทำนองนี้ต้องอยู่ที่นี่ที่เดียว)
+- Stepper 3 ขั้น (`steps()`) แทน sidebar แสดงสถานะ เสร็จ/ปัจจุบัน
+- Content กว้างสูงสุด 1120px; `.split` เป็นเนื้อหา + แผงด้านข้าง 340px (290px ที่ 761–960px), ต่ำกว่า 760px เรียงเป็นคอลัมน์เดียว
+- ≤ 720px: การ์ดผู้ขายแทนตาราง; ≤ 540px: ฟอร์มคอลัมน์เดียว stepper แบบตัวเลขบนข้อความ
+- มี `prefers-reduced-motion`, `:focus-visible`, skip link, Thai `lang` และ print styles (พิมพ์เฉพาะตัวข้อตกลง)
+- กติกา unslop: ไม่ใส่ eyebrow label, icon tile ประดับ, gradient, การ์ดซ้อนการ์ด หรือข้อความ "เพื่อการสาธิต" ซ้ำ ข้อความกฎหมายสำคัญ (AI แนะนำเท่านั้น, เอกสารไม่ใช่การรับรอง, ค่าขนส่งประมาณไม่ใช่ราคาตกลง, ยืนยันฉบับเดียวกัน, ระบบไม่ตัดสินความผิด) ให้พูดครั้งเดียวในจุดที่เกี่ยวข้อง
 - อย่าถือว่าขนาดการทดสอบครั้งก่อนครอบคลุมทุกจุด ควรตรวจทั้งขนาดข้างเคียงและ Safari เมื่อมีเครื่องมือ
 
 ## 9. การทดสอบ
@@ -189,3 +201,15 @@ Screenshots อยู่ใน `screenshots/` และไม่ถูก commit
 - บันทึก commit ตามช่วงงาน และตรวจ working tree
 - รายงานสิ่งที่ทำ ผลทดสอบ และข้อจำกัดตามจริง
 - หากเปลี่ยน stack, storage schema, คำสั่งรัน หรือ workflow ให้ปรับเอกสารส่งต่อด้วย
+
+## 11. Motion (Apple-style animation)
+
+ทั้งหมดอยู่ส่วน `/* motion */` ใน `app.js` และ `/* Motion */` ท้าย `styles.css` ปิดอัตโนมัติเมื่อผู้ใช้ตั้ง `prefers-reduced-motion`
+
+- ทุก action เรียก `update()` แทน `render()` ตรง ๆ: ถ้ายังอยู่หน้าเดิม (`view()` เท่าเดิม) ใช้ `renderInPlace()` ถ้าเปลี่ยนหน้า/บทบาทใช้ `renderNewView()` ผ่าน View Transitions API (`data-vt` = forward/back/fade/hero) และมี CSS fallback `enter-*`
+- `ui` เก็บสถานะ animation ที่ไม่ persist: แผงที่เปิดอยู่ (`ui.open`), ตำแหน่ง pill, ค่าก่อนหน้าเพื่อหาสิ่งที่เพิ่งเปลี่ยน (`prepareAnim()` → `ui.anim` → `afterRender()`)
+- Slider pill: กลุ่มที่มี `data-slider` + `.slider-pill` (บทบาท, ชุดน้ำหนัก, stepper) จัดตำแหน่งด้วย `placePills()` และจัดใหม่เมื่อ resize/โหลดฟอนต์เสร็จ
+- จัดอันดับใหม่: แถว/การ์ดที่มี `data-flip` ใช้ FLIP (`measure()` → `playFlip()`) คะแนนใน `data-count` นับไปค่าใหม่
+- `<details data-panel>` ต้องมีเนื้อหาใน `.panel-body` เพื่อให้ขยาย/ยุบแบบ animation และคงสถานะเปิดหลัง render
+- หน้าต่างเอกสารเป็น bottom sheet บนมือถือ ปิดด้วย animation ทั้งปุ่ม คลิกพื้นหลัง และ Escape
+- ใช้เฉพาะ transform/opacity (ยกเว้นความสูงของแผงที่ขยาย) อย่าเพิ่ม animation ที่ขยับ layout ทั้งหน้า

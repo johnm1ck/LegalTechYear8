@@ -6,7 +6,7 @@ Static prototype in Thai. Run `npm run dev` then open http://localhost:5173. No 
 Two roles share a simulated chilled-chicken purchase: sealed offers, explainable comparison, bilateral agreement revisions, simulated signatures, delivery evidence, and dispute resolution. All data, identities, document reviews, signatures, and timestamps are fictional. Nothing is sent externally. Browser storage retains the demo; reset clears it.
 
 ## Design
-Formal, clear Thai. Muted violet/pink from the supplied reference. Responsive phone/tablet/laptop layouts, keyboard controls, reduced motion and dark mode. Application layouts take priority over marketing-page section-height conventions. User-requested violet takes priority over skill palette restrictions.
+Formal, clear Thai. "Apple white" direction using the user's red/cream brand palette: white and light-gray surfaces, black text, red only for primary actions and emphasis, one functional green for confirmed states. No dark mode. Demo disclaimers live in a single "เดโม" menu. Responsive phone/tablet/laptop layouts, keyboard controls, and Apple-style motion (sliding segmented controls, view transitions between steps, animated re-ranking) that turns off under reduced motion. See ARCHITECTURE.md §8 and §11.
 
 ## Implementation stages
 1. Repository and requirements.

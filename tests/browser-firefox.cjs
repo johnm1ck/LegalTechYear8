@@ -1,15 +1,93 @@
-const {firefox}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const fs=require('fs');const path=require('path');const assert=require('assert');
-(async()=>{const root=path.resolve(__dirname,'..');const b=await firefox.launch({headless:true,...(process.env.FIREFOX_BIN?{executablePath:process.env.FIREFOX_BIN}:{})});try{const p=await b.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.route('http://supplytrust.test/**',r=>{const f=path.join(root,new URL(r.request().url()).pathname==='/'?'index.html':new URL(r.request().url()).pathname);r.fulfill({body:fs.readFileSync(f),contentType:f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'text/css':'text/html'})});await p.goto('http://supplytrust.test/');await p.getByRole('heading',{name:'ผู้ซื้อ / SME',exact:true}).waitFor();await p.waitForTimeout(550);fs.mkdirSync(root+'/screenshots',{recursive:true});
-for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['laptop',1440,1000]]){await p.setViewportSize({width,height});await p.screenshot({path:root+'/screenshots/'+name+'-start.png',fullPage:true});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' landing overflow')}
-await p.getByRole('button',{name:'เริ่มสาธิตในฐานะผู้ซื้อ'}).click();for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['laptop',1440,1000]]){await p.setViewportSize({width,height});await p.screenshot({path:root+'/screenshots/'+name+'-compare.png',fullPage:true});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' compare overflow')}
-await p.locator('#weight0').fill('80');assert.equal(await p.locator('#value0').textContent(),'80 / 100');
-await p.locator('#weight0').fill('10');assert.equal(await p.locator('#value0').textContent(),'10 / 100');
-await p.locator('summary').filter({hasText:'เครื่องมือการสาธิต'}).click();
-await p.locator('#scenario').selectOption('none');assert(await p.getByText('ไม่มีข้อเสนอที่ผ่านเกณฑ์อายุสินค้า',{exact:false}).isVisible());
-await p.locator('summary').filter({hasText:'เครื่องมือการสาธิต'}).click();await p.locator('#scenario').selectOption('single');assert.equal(await p.locator('tbody tr').count(),1);
-await p.locator('summary').filter({hasText:'เครื่องมือการสาธิต'}).click();await p.locator('#scenario').selectOption('normal');
-await p.locator('[data-action="docs:1"]').first().click();assert(await p.locator('dialog').isVisible());await p.getByRole('button',{name:'ปิดรายละเอียด'}).click();
-await p.locator('[data-action="choose:1"]').first().click();await p.locator('#consent').check();await p.locator('[data-action="sign"]').click();await p.locator('[data-action="switch"]').first().click();await p.locator('#consent').check();await p.locator('[data-action="sign"]').click();await p.locator('[data-action="page:delivery"]').first().click();await p.locator('#ship-form button[type="submit"]').click();await p.locator('[data-action="role:buyer"]').first().click();await p.locator('[data-action="issue"]').click();await p.locator('[data-action="role:seller"]').first().click();await p.locator('#response-form button').click();await p.locator('[data-action="role:buyer"]').first().click();await p.locator('[data-action="resolve"]').click();assert(await p.getByText('ตกลงแนวทางแก้ไขแล้ว',{exact:true}).isVisible());
-for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['laptop',1440,1000]]){await p.setViewportSize({width,height});await p.screenshot({path:root+'/screenshots/'+name+'-evidence.png',fullPage:true});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' delivery overflow')}
-await p.locator('[data-action="theme"]').click();await p.screenshot({path:root+'/screenshots/dark-laptop.png',fullPage:true});assert.deepEqual(errors,[]);console.log('PASS Firefox: 3 viewport sizes; buyer selection; both confirmations; dispatch; shortage; supplier response; mutual resolution; no page errors.');}finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});
+// Firefox end-to-end journey across phone, tablet and laptop sizes.
+// Run: node tests/browser-firefox.cjs  (needs Playwright + Firefox, see ARCHITECTURE.md §9)
+const {firefox} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+
+const root = path.resolve(__dirname, '..');
+const types = {'.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png'};
+const sizes = [['iphone', 390, 844], ['ipad', 820, 1180], ['laptop', 1440, 1000]];
+
+(async () => {
+  const browser = await firefox.launch({headless: true, ...(process.env.FIREFOX_BIN ? {executablePath: process.env.FIREFOX_BIN} : {})});
+  try {
+    const p = await browser.newPage();
+    const errors = [];
+    p.on('pageerror', e => errors.push(e.message));
+    await p.route('http://supplytrust.test/**', r => {
+      const pathname = new URL(r.request().url()).pathname;
+      const file = path.join(root, pathname === '/' ? 'index.html' : pathname);
+      r.fulfill({body: fs.readFileSync(file), contentType: types[path.extname(file)] || 'text/html'});
+    });
+    await p.goto('http://supplytrust.test/');
+    await p.locator('.role-card').first().waitFor();
+    fs.mkdirSync(path.join(root, 'screenshots'), {recursive: true});
+
+    const shoot = async (label, check) => {
+      for (const [name, width, height] of sizes) {
+        await p.setViewportSize({width, height});
+        await p.waitForTimeout(150);
+        await p.screenshot({path: path.join(root, 'screenshots', `${name}-${label}.png`), fullPage: true});
+        assert(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} ${check} overflow`);
+      }
+    };
+
+    await shoot('start', 'landing');
+    await p.locator('.role-card[data-action="role:buyer"]').click();
+    await shoot('compare', 'compare');
+
+    // Weights live behind a disclosure.
+    await p.locator('summary', {hasText: 'ปรับน้ำหนักเอง'}).click();
+    await p.locator('#weight0').fill('80');
+    assert.equal(await p.locator('#value0').textContent(), '80');
+    await p.locator('#weight0').fill('10');
+    assert.equal(await p.locator('#value0').textContent(), '10');
+
+    // Motion: panels stay open across re-renders; the slider pill lines up with the pressed preset.
+    await p.locator('[data-action="preset:cost"]').click();
+    await p.waitForTimeout(450);
+    assert(await p.evaluate(() => document.querySelector('details[data-panel="tune"]').open), 'tune panel should stay open');
+    const pill = await p.evaluate(() => {
+      const g = document.querySelector('[data-slider="preset"]');
+      return {pill: g.querySelector('.slider-pill').getBoundingClientRect().left, btn: g.querySelector('[aria-pressed="true"]').getBoundingClientRect().left};
+    });
+    assert(Math.abs(pill.pill - pill.btn) < 1.5, 'preset pill aligned with pressed button');
+    await p.locator('[data-action="preset:balanced"]').click();
+
+    // Demo scenarios.
+    const scenario = async v => { await p.locator('.demo-menu summary').click(); await p.locator('#scenario').selectOption(v); };
+    await scenario('none');
+    assert(await p.getByText('ยังไม่มีผู้ขายที่ผ่านเกณฑ์อายุสินค้า', {exact: true}).isVisible());
+    await scenario('single');
+    assert.equal(await p.locator('tbody tr').count(), 1);
+    await scenario('normal');
+
+    // Documents dialog.
+    await p.locator('[data-action="docs:1"]').first().click();
+    assert(await p.locator('dialog').isVisible());
+    await p.getByRole('button', {name: 'ปิดรายละเอียด'}).click();
+
+    // Full journey: select, both confirm, ship, shortage, response, resolution.
+    await p.locator('[data-action="choose:1"]').first().click();
+    await p.locator('#consent').check();
+    await p.locator('[data-action="sign"]').click();
+    // The seller reviews on their own: waiting state first, then confirmed.
+    assert(await p.locator('.badge.wait').isVisible(), 'seller shows as reviewing');
+    await p.getByRole('button', {name: 'ไปที่การส่งมอบ'}).waitFor({timeout: 10000});
+    assert.equal(await p.locator('.rows .badge.ok').count(), 2);
+    await p.getByRole('button', {name: 'ไปที่การส่งมอบ'}).click();
+    // Buyer stays the buyer throughout: the seller ships and responds on their own.
+    assert.equal(await p.getByText(/สลับเป็น/).count(), 0, 'no role-switch buttons in the flow');
+    await p.locator('[data-action="issue"]').click({timeout: 10000});
+    assert(await p.locator('.waiting').isVisible(), 'buyer waits for seller response');
+    await p.locator('[data-action="resolve"]').click({timeout: 10000});
+    assert(await p.getByText('ตกลงแนวทางแก้ไขแล้ว', {exact: true}).isVisible());
+    await shoot('evidence', 'delivery');
+
+    assert.deepEqual(errors, []);
+    console.log('PASS Firefox: 3 viewport sizes; weights; scenarios; documents; buyer selection; both confirmations; dispatch; shortage; supplier response; mutual resolution; no page errors.');
+  } finally {
+    await browser.close();
+  }
+})().catch(e => { console.error(e); process.exitCode = 1; });

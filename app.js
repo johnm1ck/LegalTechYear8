@@ -1,33 +1,849 @@
-import {initialOffers,rank,defaults} from './logic.js';
-const icons={shield:'M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z M8 12l3 3 5-6',arrow:'M5 12h14m-6-6 6 6-6 6',grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',doc:'M14 2H5v20h14V7l-5-5Z M14 2v6h5 M8 12h8 M8 16h6',truck:'M1 5h13v12H1z M14 9h5l3 4v4h-8 M5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M18 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4',check:'m5 12 4 4L19 6',spark:'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z',bag:'M4 7h16l1 14H3L4 7Z M8 8V6a4 4 0 0 1 8 0v2',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 1v3 M12 20v3 M1 12h3 M20 12h3 M4 4l2 2 M18 18l2 2 M4 20l2-2 M18 6l2-2',clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l3 2',user:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M4 21v-3a8 6 0 0 1 16 0v3',refresh:'M20 7V2l-3 3A9 9 0 1 0 4 18 M20 7h-5',download:'M12 3v12m-5-5 5 5 5-5 M4 16v5h16v-5'};
-const icon=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[n]||icons.doc}"/></svg>`;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=n=>n==null?'รอยืนยัน':new Intl.NumberFormat('th-TH',{maximumFractionDigits:0}).format(n);const days=n=>`${Math.floor(n)} วัน ${Math.round((n%1)*24)} ชม.`;
-const fresh=()=>({role:null,page:'offers',offers:structuredClone(initialOffers),weights:[...defaults],scenario:'normal',selected:null,version:1,buyer:false,seller:false,amended:false,revisionNote:'',shipped:false,received:false,issue:false,resolved:false,acceptResolution:false,evidence:null,events:[]});
-let s;try{const saved=JSON.parse(localStorage.getItem('supplytrust-v1'));s=saved&&typeof saved==='object'&&Array.isArray(saved.offers)&&Array.isArray(saved.events)&&Array.isArray(saved.weights)?{...fresh(),...saved}:fresh()}catch{s=fresh()}let dark=localStorage.getItem('supplytrust-theme')==='dark';document.documentElement.classList.toggle('dark',dark);
-const app=document.querySelector('#app');const save=()=>{try{localStorage.setItem('supplytrust-v1',JSON.stringify(s))}catch{toast('พื้นที่จัดเก็บเต็ม กรุณาเริ่มการสาธิตใหม่')}};let toastTimer;function toast(t){const el=document.querySelector('#toast');el.textContent=t;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',4000)}
-const event=(title,detail)=>{s.events.push({title,detail,time:new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})})};const chosen=()=>s.offers.find(o=>o.id===s.selected);const agreed=()=>s.buyer&&s.seller;const btn=(text,action,style='')=>`<button class="btn ${style}" data-action="${action}">${text}</button>`;
-function header(){return `<header class="header"><button class="brand" data-action="home" aria-label="SupplyTrust กลับหน้าเลือกบทบาท"><span class="brand-mark">${icon('shield')}</span><span>Supply<span>Trust</span></span></button><div class="header-right"><span class="chip"><i class="dot"></i>พื้นที่สาธิต • ข้อมูลสมมติ</span>${s.role?btn(s.role==='buyer'?'มุมมองผู้ซื้อ':'มุมมองผู้ขาย','switch','soft'):''}<button class="icon-btn" data-action="theme" aria-label="${dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด'}">${icon('sun')}</button></div></header>`}
-function footer(){return `<footer class="footer"><span>© 2026 SupplyTrust · ข้อตกลงชัดเจน หลักฐานตรวจสอบได้</span><span>ต้นแบบเพื่อการสาธิต · ไม่มีการทำธุรกรรมจริง</span></footer>`}
-function landing(){return `<main id="main" class="landing enter"><div class="intro"><span class="eyebrow">ข้อตกลงและหลักฐานสำหรับธุรกิจขนาดเล็ก</span><h1>ซื้อขายอย่างมั่นใจ<br><em>เริ่มต้นจากข้อตกลงที่ชัดเจน</em></h1><p>เปรียบเทียบข้อเสนอ จัดทำข้อตกลงร่วมกัน และเก็บหลักฐานการส่งมอบ<br>ทดลองใช้งานผ่านสถานการณ์ร้านอาหารสั่งซื้ออกไก่แช่เย็น</p></div><div class="roles">${[['buyer','bag','ผู้ซื้อ / SME','สำหรับเจ้าของร้านอาหารและธุรกิจขนาดเล็ก','เปรียบเทียบราคาและเงื่อนไขให้ครบถ้วน','ตรวจและยืนยันข้อตกลงร่วมกับผู้ขาย','ตรวจรับสินค้าและแจ้งปัญหาพร้อมหลักฐาน','เริ่มสาธิตในฐานะผู้ซื้อ'],['seller','truck','ผู้ขาย / Supplier','สำหรับผู้ผลิตและผู้จัดจำหน่ายสินค้า','เสนอราคาพร้อมระบุเงื่อนไขอย่างชัดเจน','ตรวจการแก้ไขก่อนยืนยันข้อตกลง','บันทึกการส่งมอบและตอบข้อร้องเรียน','เริ่มสาธิตในฐานะผู้ขาย']].map(([role,i,title,sub,...a])=>`<article class="panel role-card"><div class="tile-icon">${icon(i)}</div><h2>${title}</h2><p>${sub}</p><ul>${a.slice(0,3).map(t=>`<li>${icon('check')}${t}</li>`).join('')}</ul>${btn(a[3]+' '+icon('arrow'),'role:'+role,role==='buyer'?'primary full':'soft full')}</article>`).join('')}</div><div class="journey">${[['01','ข้อเสนอที่เปรียบเทียบได้','เห็นราคา เงื่อนไข และข้อมูลที่ยังไม่ครบ'],['02','ข้อตกลงที่ยืนยันร่วมกัน','ทั้งสองฝ่ายตรวจและยืนยันร่างฉบับเดียวกัน'],['03','หลักฐานที่เชื่อมโยงกัน','ย้อนดูสิ่งที่ตกลงและสิ่งที่ส่งมอบได้ในที่เดียว']].map(([n,h,p])=>`<div><span>${n}</span><div><h3>${h}</h3><p>${p}</p></div></div>`).join('')}</div><p class="demo-note">ข้อมูลผู้ประกอบการ เอกสาร และการลงนามทั้งหมดเป็นข้อมูลจำลองสำหรับการสาธิต สามารถสลับบทบาทเพื่อทดลองดำเนินการทั้งสองฝ่ายได้</p>${footer()}</main>`}
-function sidebar(){return `<aside class="sidebar"><div class="workspace"><span class="eyebrow">พื้นที่การทำงาน</span><strong>${s.role==='buyer'?'ครัวอุ่นใจ':esc(chosen()?.name||'บ้านสวนฟาร์ม')}</strong><span class="role-label">${s.role==='buyer'?'ผู้ซื้อ · ร้านอาหาร':'ผู้ขาย · ผู้ผลิตและจัดจำหน่าย'}</span></div><nav class="nav" aria-label="เมนูหลัก">${[['offers','grid',s.role==='buyer'?'เปรียบเทียบข้อเสนอ':'จัดทำข้อเสนอ','01'],['contract','doc','ข้อตกลงซื้อขาย','02'],['delivery','truck','ส่งมอบและหลักฐาน','03']].map(([p,i,t,n])=>`<button data-action="page:${p}" class="${s.page===p?'active':''}" ${s.page===p?'aria-current="page"':''}>${icon(i)}<span>${t}</span><small>${n}</small></button>`).join('')}</nav><div class="sidebar-note">${icon('shield')}<h3 style="margin-top:8px;font-size:13px">ข้อตกลงที่ตรวจสอบได้</h3><p>ข้อเสนอ ข้อตกลง และหลักฐานการส่งมอบเชื่อมโยงอยู่ในรายการเดียวกัน</p></div><details><summary>เครื่องมือการสาธิต</summary><label class="field">สถานการณ์เปรียบเทียบ<select id="scenario"><option value="normal" ${s.scenario==='normal'?'selected':''}>ข้อเสนอปกติ 5 ราย</option><option value="none" ${s.scenario==='none'?'selected':''}>ไม่มีรายใดผ่านเกณฑ์</option><option value="single" ${s.scenario==='single'?'selected':''}>มีข้อเสนอรายเดียว</option><option value="missing" ${s.scenario==='missing'?'selected':''}>ไม่ระบุค่าขนส่งหรือระยะทาง</option></select></label>${btn('เริ่มการสาธิตใหม่','reset','danger full')}</details></aside>`}
-function request(){return `<section class="panel request" aria-label="สรุปคำขอซื้อ"><div class="request-title"><div class="tile-icon">${icon('bag')}</div><div><small>คำขอซื้อ ST-2026-001</small><strong>อกไก่สดแช่เย็น</strong></div></div><div><small>ปริมาณที่ต้องการ</small><strong>100 กิโลกรัม</strong></div><div><small>อายุสินค้าเหลือขั้นต่ำ</small><strong>4 วัน เมื่อส่งถึง</strong></div><div><small>จุดส่งสินค้า</small><strong>เขตปทุมวัน กรุงเทพฯ</strong></div></section>`}
-function heading(title,sub,extra=''){return `<div class="page-head"><div><h1>${title}</h1><p>${sub}</p></div>${extra}</div>`}
-function offersForScenario(){let o=structuredClone(s.offers);if(s.scenario==='single')o=o.slice(0,1);if(s.scenario==='missing'){o[1].shipping=null;o[2].distance=null;}return o}
-function tags(o){return `${o.new?'<span class="tag">ผู้ขายรายใหม่</span>':''}${!o.eligible?'<span class="tag red">อายุสินค้าไม่ผ่านเกณฑ์</span>':''}${o.unusual?'<span class="tag amber">ตรวจสอบค่าขนส่ง</span>':''}${o.shipping==null?'<span class="tag amber">ยังไม่ระบุค่าขนส่ง</span>':''}${o.distance==null?'<span class="tag amber">ไม่ทราบระยะทาง</span>':''}`}
-function offersPage(){const rows=rank(offersForScenario(),s.weights,s.scenario),best=rows.find(o=>o.eligible),cheap=[...rows].sort((a,b)=>a.price-b.price)[0],labels=['ต้นทุนรวมค่าขนส่ง','อายุสินค้าเหลือ','ระยะเวลาขนส่ง','เอกสารที่ตรวจแล้ว'];return `${heading('เปรียบเทียบข้อเสนอ','พิจารณาราคาและเงื่อนไขอย่างครบถ้วน ก่อนเลือกผู้ขาย',`<span class="chip">${icon('clock')} ปิดรับข้อเสนอแล้ว</span>`)}${request()}<section class="panel pad"><div class="section-heading"><h2>คุณให้ความสำคัญกับเรื่องใด</h2><button class="text-btn" data-action="preset:default">คืนค่าเริ่มต้น</button></div><div class="weights">${labels.map((l,i)=>`<div class="weight"><label for="weight${i}">${l}<b id="value${i}">${s.weights[i]} / 100</b></label><input id="weight${i}" type="range" min="0" max="100" value="${s.weights[i]}" data-weight="${i}"></div>`).join('')}</div><div class="presets">${btn('เน้นต้นทุน','preset:cost')}${btn('เน้นอายุสินค้า','preset:fresh')}${btn('เน้นส่งรวดเร็ว','preset:speed')}</div><small>คะแนนรวมคำนวณตามสัดส่วนความสำคัญที่เลือก หากตั้งทุกด้านเป็นศูนย์ ระบบจะใช้ค่าเริ่มต้น</small></section><div id="comparison"><div class="compare-top"><h2>ข้อเสนอจากผู้ขาย <span class="muted" style="font-size:14px">${rows.length} ราย</span></h2><span class="chip">${icon('shield')} ผู้ขายไม่เห็นข้อเสนอของรายอื่น</span></div>${!best?'<div class="notice error" style="margin-bottom:16px">ไม่มีข้อเสนอที่ผ่านเกณฑ์อายุสินค้า กรุณาทบทวนเงื่อนไขหรือเปิดรับข้อเสนอรอบใหม่</div>':''}<div class="panel desktop-offers"><div class="table-wrap"><table><thead><tr><th>ผู้ขาย</th><th>ราคา / กก.</th><th>ค่าขนส่ง<br>ที่ใช้เปรียบเทียบ</th><th>ต้นทุนรวม<br>ส่งถึงที่</th><th>เวลาขนส่ง</th><th>อายุเหลือ</th><th>เอกสาร</th><th>คะแนน</th><th>การเลือก</th></tr></thead><tbody>${rows.map(o=>`<tr class="${o.id===best?.id?'recommended':''}"><td><div class="supplier"><span class="avatar">${o.initial}</span><div><strong>${o.name}</strong><small>${o.area} · ${o.distance==null?'ไม่ทราบระยะทาง':o.distance+' กม.'}</small><div class="supplier-tags">${o.id===best?.id?'<span class="tag green">คะแนนสูงสุดที่ผ่านเกณฑ์</span>':''}${tags(o)}</div></div></div></td><td>${money(o.price)} บาท</td><td>${money(o.freight)}${o.unusual||o.shipping==null?'<small style="display:block">ค่าประมาณ*</small>':''}</td><td><span class="money">${money(o.total)}</span><small style="display:block">บาท / 100 กก.</small></td><td>${o.hours} ชม.</td><td><span class="${o.eligible?'':'muted'}">${days(o.remaining)}</span><div class="bar"><span style="width:${Math.max(0,o.remaining)/7*100}%;${!o.eligible?'background:#c98492':''}"></span></div></td><td><button class="text-btn" data-action="docs:${o.id}">${o.docs} / 4 รายการ</button></td><td><span class="score">${o.score.toFixed(0)}</span></td><td>${btn(s.selected===o.id?'เลือกแล้ว':'เลือกผู้ขาย','choose:'+o.id,o.id===best?.id?'primary':'')}</td></tr>`).join('')}</tbody></table></div><div class="table-note">* ค่าขนส่งประมาณใช้เพื่อเปรียบเทียบเท่านั้น ต้องยืนยันค่าขนส่งจริงก่อนยืนยันข้อตกลง · คะแนนแสดงความเหมาะสมตามข้อมูลสมมติ ไม่ใช่การรับรองคุณภาพสินค้า</div></div><div class="mobile-offers">${rows.map(o=>`<article class="panel offer-card ${o.id===best?.id?'recommended':''}"><div class="supplier"><span class="avatar">${o.initial}</span><div><strong>${o.name}</strong><small>${o.area} · ${o.distance==null?'ไม่ทราบระยะทาง':o.distance+' กม.'}</small></div><span class="score">${o.score.toFixed(0)}</span></div><div class="supplier-tags">${o.id===best?.id?'<span class="tag green">คะแนนสูงสุดที่ผ่านเกณฑ์</span>':''}${tags(o)}</div><div class="offer-stats"><div><small>ต้นทุนรวมส่งถึงที่</small><strong>${money(o.total)} บาท</strong></div><div><small>อายุสินค้าเหลือ</small><strong>${days(o.remaining)}</strong></div><div><small>ราคา / กก. · ค่าขนส่งที่ใช้เทียบ</small><strong>${money(o.price)} · ${money(o.freight)} บาท</strong></div><div><small>เวลาขนส่ง · เอกสารตรวจแล้ว</small><strong>${o.hours} ชม. · ${o.docs}/4</strong></div></div>${btn('ดูเอกสารประกอบ','docs:'+o.id,'full')}${btn(s.selected===o.id?'เลือกผู้ขายแล้ว':'เลือกผู้ขายรายนี้','choose:'+o.id,(o.id===best?.id?'primary ':'')+'full')}</article>`).join('')}<small>ค่าประมาณใช้เพื่อเปรียบเทียบ ต้องยืนยันค่าขนส่งจริงก่อนทำข้อตกลง</small></div><section class="advisor"><div class="tile-icon">${icon('spark')}</div><div><h3>คำแนะนำประกอบการตัดสินใจ</h3><p>${best?`<strong>${best.name}</strong> ได้คะแนนสูงสุดตามความสำคัญที่คุณเลือก ต้นทุนรวมส่งถึงที่ <strong>${money(best.total)} บาท</strong> อายุสินค้าเหลือประมาณ <strong>${days(best.remaining)}</strong> เมื่อส่งถึง`: 'ยังไม่มีผู้ขายที่ผ่านเกณฑ์อายุสินค้า ระบบจึงไม่แนะนำผู้ขายในรอบนี้'}${rows.length>1&&best&&cheap.id!==best.id?`<br>${cheap.name} มีราคาต่อกิโลกรัมต่ำที่สุด แต่${!cheap.eligible?'อายุสินค้าเหลือไม่ถึงเกณฑ์ที่กำหนด':`ได้คะแนนรวมต่ำกว่า โดยมีต้นทุนรวม ${money(cheap.total)} บาท`}`:''}</p>${rows.some(o=>o.unusual)?'<p>โปรดตรวจสอบค่าขนส่งที่ต่ำกว่าค่าประมาณอย่างมีนัยสำคัญก่อนตกลงราคา</p>':''}${rows.some(o=>!o.terms)?'<p>บางรายยังไม่ระบุวิธีจัดการกรณีส่งไม่ครบ ควรตกลงเพิ่มเติมก่อนยืนยัน</p>':''}${best&&rows.find(o=>o.new&&o.docs>=3&&o.eligible&&o.id!==best.id)?`<p>${rows.find(o=>o.new&&o.docs>=3&&o.eligible&&o.id!==best.id).name} เป็นผู้ขายรายใหม่ที่ผ่านเกณฑ์และตรวจเอกสารแล้วอย่างน้อย 3 รายการ สามารถพิจารณาทดลองสั่งซื้อรอบแรกได้</p>`:''}<small>AI เป็นผู้แนะนำเท่านั้น การตัดสินใจเลือกเป็นของคุณ · ต้นแบบนี้ใช้กฎคำนวณเพื่อจำลองคำแนะนำ</small></div></section></div><details><summary>รายละเอียดคำขอซื้อและวิธีคำนวณ</summary><p>อายุสินค้ารวม 7 วัน อายุเหลือขั้นต่ำ 4 วัน ณ จุดส่ง · ต้องการเอกสารประกอบ 4 รายการตามรายการสมมติของเดโม</p><p>ต้นทุนรวม = ราคา × 100 กก. + ค่าขนส่งที่ใช้เปรียบเทียบ ค่าขนส่งประมาณ = 500 + ระยะทาง × 10 บาท หากราคาขนส่งที่แจ้งต่ำกว่า 70% ของค่าประมาณ จะใช้ค่าประมาณจัดอันดับ อายุเหลือ = 7 − อายุเมื่อออกส่ง − ชั่วโมงขนส่ง ÷ 24 รายที่ไม่ผ่านเกณฑ์อยู่ท้ายรายการเสมอ</p><p>อุณหภูมิ ระยะตรวจรับ และรายการเอกสารในต้นแบบเป็นเงื่อนไขสมมติที่ต้องให้ผู้เชี่ยวชาญตรวจสอบก่อนใช้งานจริง</p></details>`}
-function supplierPage(){const o=chosen()||s.offers[1];return `${heading('จัดทำข้อเสนอราคา','ระบุราคาและเงื่อนไขให้ครบถ้วน เพื่อให้ผู้ซื้อพิจารณาบนข้อมูลเดียวกัน')} ${request()}<div class="split"><section class="panel pad"><div class="section-heading"><h2>ข้อเสนอของ${esc(o.name)}</h2><span class="tag">${o.submitted?'ส่งข้อเสนอแล้ว':'แบบร่างข้อเสนอ'}</span></div><form id="offer-form"><div class="form-grid">${[['price','ราคาต่อกิโลกรัม (บาท)',o.price],['shipping','ค่าขนส่งที่เสนอ (บาท)',o.shipping],['hours','ระยะเวลาขนส่ง (ชั่วโมง)',o.hours],['age','อายุสินค้าเมื่อออกส่ง (วัน)',o.age]].map(([n,l,v])=>`<label class="field">${l}<input name="${n}" type="number" value="${v}" required min="${n==='hours'?1:0}" max="${n==='age'?7:100000}" step="${n==='price'?'0.01':1}"></label>`).join('')}<label class="field wide">วิธีดำเนินการกรณีส่งสินค้าไม่ครบ<textarea name="terms" required placeholder="ระบุวิธีแก้ไข ระยะเวลาดำเนินการ และผู้รับผิดชอบค่าใช้จ่าย">${o.terms||o.termsText?esc(o.termsText||'ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง โดยรับผิดชอบค่าขนส่งเพิ่มเติม'):''}</textarea></label><label class="field wide">ข้อยกเว้นหรือเงื่อนไขเพิ่มเติม<textarea name="exception" placeholder="หากไม่มี ให้ระบุว่า ไม่มี">${esc(o.exception||'ไม่มี')}</textarea></label></div><div class="notice" style="margin-top:20px">ข้อเสนอนี้มีอายุ 48 ชั่วโมงในสถานการณ์จำลอง ผู้ซื้อจะเห็นเงื่อนไขทั้งหมดก่อนตัดสินใจ และผู้ขายต้องยืนยันร่างข้อตกลงอีกครั้ง</div><button class="btn primary full" style="margin-top:20px" type="submit">${o.submitted?'บันทึกและส่งข้อเสนอฉบับแก้ไข':'ส่งข้อเสนอเพื่อการสาธิต'} ${icon('arrow')}</button></form></section><div class="stack"><section class="panel pad"><h2>เอกสารประกอบข้อเสนอ</h2><p class="muted" style="font-size:12px;margin-top:8px">สถานะจำลอง ไม่ใช่การรับรองคุณภาพสินค้า</p><div class="status-list">${['ทะเบียนนิติบุคคล','เอกสารสถานประกอบการ','ผลวิเคราะห์สินค้าตัวอย่าง','เอกสารระบบการผลิต'].map((d,i)=>`<div><span>${d}</span><span class="tag ${i<o.docs?'green':'amber'}">${i<o.docs?'ตรวจแล้ว':'รอตรวจสอบ'}</span></div>`).join('')}</div><details><summary>ดูขอบเขตการตรวจเอกสาร</summary><p>ตรวจว่ามีเอกสารและข้อมูลตรงกับผู้ขายตามรายการสมมติ ณ วันที่สาธิต ไม่ได้ตรวจรับรองคุณภาพผลิตภัณฑ์หรือความสามารถในการส่งมอบ</p></details></section><section class="panel pad"><div class="tile-icon">${icon('shield')}</div><h3 style="margin-top:15px">เก็บข้อเสนอฉบับที่ยื่นไว้</h3><p class="muted" style="font-size:13px;margin-top:8px">เมื่อมีการแก้ไขข้อเสนอ ระบบจะบันทึกเหตุการณ์ หากมีข้อตกลงอยู่แล้ว ทั้งสองฝ่ายต้องตรวจและยืนยันฉบับใหม่</p>${btn('ดูมุมมองของผู้ซื้อ','role:buyer','soft full')}</section></div></div>`}
-function empty(title,desc,action,text){return `<section class="panel empty">${icon('doc')}<h2>${title}</h2><p>${desc}</p>${btn(text,action,'primary')}</section>`}
-function contractPage(){const o=chosen();if(!o)return heading('ข้อตกลงซื้อขาย','ตรวจและยืนยันเงื่อนไขร่วมกันทั้งสองฝ่าย')+empty('ยังไม่มีข้อเสนอที่ผู้ซื้อเลือก','เริ่มจากฝั่งผู้ซื้อเพื่อเปรียบเทียบและเลือกข้อเสนอ ก่อนจัดทำร่างข้อตกลง','buyer-offers','ไปยังหน้าเปรียบเทียบ');const r=rank([o],s.weights,s.scenario)[0];const shippingConfirmed=o.shipping!=null&&!r.unusual||o.freightConfirmed;const terms=o.terms||s.amended;const ready=shippingConfirmed&&terms;return `${heading('ข้อตกลงซื้อขาย','ตรวจรายละเอียดก่อนยืนยัน ข้อมูลอ้างอิงจากข้อเสนอที่ผู้ซื้อเลือก',btn(icon('download')+' พิมพ์ร่างข้อตกลง','print'))}<div class="split"><article class="panel pad"><div class="contract-heading"><span class="eyebrow">SUPPLYTRUST · ST-2026-001</span><h2>ร่างข้อตกลงซื้อขายสินค้า</h2><span class="tag ${agreed()?'green':''}">${agreed()?'ทั้งสองฝ่ายยืนยันแล้ว (จำลอง)':'รอการยืนยันร่วมกัน'} · ฉบับที่ ${s.version}</span></div><div class="list"><div><span>ผู้ซื้อ</span><strong>ร้านอาหารครัวอุ่นใจ (ข้อมูลสมมติ)</strong></div><div><span>ผู้ขาย</span><strong>${o.name} (ข้อมูลสมมติ)</strong></div><div><span>สินค้าและปริมาณ</span><strong>อกไก่สดแช่เย็น 100 กิโลกรัม</strong></div><div><span>ราคาต่อกิโลกรัม</span><strong>${money(o.price)} บาท</strong></div><div><span>ค่าขนส่งที่ผู้ขายเสนอ</span><strong>${money(o.shipping)} บาท ${!shippingConfirmed?'· รอยืนยัน':''}</strong></div><div><span>ยอดรวมตามข้อเสนอ</span><strong>${money(o.shipping==null?null:o.price*100+o.shipping)} บาท</strong></div></div>${!shippingConfirmed?`<div class="notice warn">ค่าขนส่งยังต้องยืนยัน ค่าประมาณ ${money(r.estimate)} บาทใช้เพื่อเปรียบเทียบเท่านั้น ${s.role==='seller'?btn('ยืนยันค่าขนส่งที่เสนอ','freight','soft'):btn('สลับไปให้ผู้ขายยืนยัน','role:seller','soft')}</div>`:''}${!r.eligible?'<div class="notice error">ข้อเสนอนี้มีอายุสินค้าเหลือต่ำกว่า 4 วัน เงื่อนไขยังขัดกับคำขอซื้อ โปรดตรวจสอบก่อนยืนยัน</div>':''}<div class="clauses"><div class="clause"><h3>1. การส่งมอบและเกณฑ์ตรวจรับ</h3><p>จัดส่งถึงเขตปทุมวัน กรุงเทพฯ ภายใน ${o.hours} ชั่วโมงนับจากเวลาออกส่งที่บันทึก อายุสินค้าเหลือไม่น้อยกว่า 4 วัน และอุณหภูมิขณะรับไม่เกิน 4 °C ตามเงื่อนไขสมมติของเดโม</p></div><div class="clause"><h3>2. การตรวจรับและแจ้งปัญหา</h3><p>ผู้ซื้อบันทึกน้ำหนัก เลขล็อต อุณหภูมิ และภาพถ่าย แจ้งปัญหาภายใน 6 ชั่วโมงหลังรับสินค้า การบันทึกว่าสินค้ามาถึงแยกจากการยืนยันผลตรวจรับ</p></div><div class="clause"><h3>3. กรณีส่งมอบไม่ครบ</h3><p>${terms?esc(o.termsText||'ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมงหลังทั้งสองฝ่ายยืนยันปัญหา โดยผู้ขายรับผิดชอบค่าขนส่งเพิ่มเติม'):'ยังไม่ได้ตกลงวิธีดำเนินการ กรุณาขอให้ระบุเงื่อนไขก่อนยืนยัน'}</p></div><div class="clause"><h3>4. ความรับผิดชอบระหว่างขนส่ง</h3><p>ในร่างตัวอย่าง ผู้ขายรับผิดชอบความเสียหายระหว่างขนส่งจนผู้ซื้อยืนยันการรับมอบ เงื่อนไขนี้ต้องตรวจสอบและตกลงร่วมกันก่อนใช้งานจริง</p></div><div class="clause"><h3>5. เงื่อนไขเพิ่มเติม</h3><p>${esc(o.exception||'ไม่มีข้อยกเว้นเพิ่มเติม')} · ราคาตามร่างตัวอย่างคงที่ 48 ชั่วโมงนับจากยืนยันร่วมกัน เงื่อนไขการชำระเงินให้คู่ค้าตกลงเพิ่มเติมนอกการสาธิตนี้</p></div></div><details><summary>ประวัติร่างและการเปลี่ยนแปลง</summary><p>ฉบับที่ ${s.version} · ${esc(s.revisionNote||'สร้างจากข้อเสนอที่ผู้ซื้อเลือก')}</p>${s.events.filter(e=>/ร่าง|แก้ไข|เลือก/.test(e.title)).map(e=>`<p>${esc(e.time)} · ${esc(e.title)} — ${esc(e.detail)}</p>`).join('')}</details><div class="notice" style="margin-top:15px">ร่างตัวอย่างเพื่อการสาธิต อุณหภูมิ ระยะตรวจรับ และข้อสัญญาต้องให้ผู้เชี่ยวชาญด้านอาหารและกฎหมายตรวจสอบก่อนใช้งานจริง</div></article><div class="stack"><section class="panel pad"><h2>การยืนยันฉบับที่ ${s.version}</h2><div class="status-list"><div><span>ร้านอาหารครัวอุ่นใจ</span><span class="tag ${s.buyer?'green':''}">${s.buyer?'ยืนยันแล้ว':'รอผู้ซื้อยืนยัน'}</span></div><div><span>${o.name}</span><span class="tag ${s.seller?'green':''}">${s.seller?'ยืนยันแล้ว':'รอผู้ขายยืนยัน'}</span></div></div><p class="muted" style="font-size:12px">การเลือกผู้ขายยังไม่ใช่การยืนยันข้อตกลง ทั้งสองฝ่ายต้องยืนยันร่างฉบับเดียวกัน</p>${!ready?'<div class="notice warn" style="margin-top:15px">ยังมีเงื่อนไขที่ต้องตกลงเพิ่มเติมก่อนยืนยัน</div>':''}${agreed()?btn('ไปยังการส่งมอบสินค้า','page:delivery','primary full'):`<div class="checks"><label><input type="checkbox" id="consent" ${!ready?'disabled':''}>ข้าพเจ้าได้ตรวจร่างฉบับที่ ${s.version} และเข้าใจว่าเป็นการยืนยันเพื่อสาธิตเท่านั้น</label>${!r.eligible?'<label><input type="checkbox" id="risk-consent">รับทราบว่าอายุสินค้าไม่ผ่านเกณฑ์ และต้องตกลงแก้ไขก่อนซื้อขายจริง</label>':''}</div><button class="btn primary full" data-action="sign" ${s[s.role]||!ready?'disabled':''}>${s[s.role]?'บทบาทนี้ยืนยันแล้ว':'ยืนยันร่างเพื่อการสาธิต'}</button>${btn('สลับให้'+(s.role==='buyer'?'ผู้ขาย':'ผู้ซื้อ')+'ตรวจร่าง','switch','full')}`}</section><section class="panel pad"><h2>ขอแก้ไขข้อตกลง</h2><p class="muted" style="font-size:12px;margin:10px 0">เมื่อแก้ไขร่าง ระบบจะยกเลิกการยืนยันเดิมเพื่อให้ทั้งสองฝ่ายตรวจฉบับใหม่</p><form id="revision-form"><label class="field">รายละเอียดที่เสนอให้แก้ไข<textarea name="note" required placeholder="เช่น ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง และรับผิดชอบค่าขนส่ง"></textarea></label><button class="btn soft full" type="submit" style="margin-top:12px" ${s.shipped?'disabled':''}>บันทึกร่างฉบับแก้ไข</button></form>${s.shipped?'<small>ส่งมอบแล้ว จัดการการเปลี่ยนแปลงผ่านการแจ้งปัญหา</small>':''}</section></div></div>`}
-function issueInfo(){const weight=s.actualWeight??95,temp=s.actualTemp??3,diff=weight-100,hot=temp>4,parts=[],clauses=new Set(),remedy=[];if(diff<0){parts.push('สินค้าขาด '+(-diff)+' กิโลกรัม');clauses.add('ข้อ 3 กรณีส่งมอบไม่ครบ');remedy.push('จัดส่งสินค้าเพิ่มเติม '+(-diff)+' กิโลกรัมภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่งเพิ่มเติม')}if(diff>0){parts.push('สินค้าเกิน '+diff+' กิโลกรัม');clauses.add('ข้อ 1 การส่งมอบและเกณฑ์ตรวจรับ');remedy.push('รับคืนสินค้าส่วนเกิน '+diff+' กิโลกรัม หรือให้ผู้ซื้อเลือกเก็บไว้และชำระตามราคาต่อกิโลกรัมที่ตกลง')}if(hot){parts.push('อุณหภูมิขณะรับ '+temp+' °C สูงกว่าเกณฑ์ 4 °C');clauses.add('ข้อ 1 การส่งมอบและเกณฑ์ตรวจรับ');clauses.add('ข้อ 4 ความรับผิดชอบระหว่างขนส่ง');remedy.push('เปลี่ยนสินค้าที่อุณหภูมิเกินเกณฑ์ภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่ง')}return {weight,temp,diff,hot,summary:parts.join(' และ ')||'ไม่พบความคลาดเคลื่อนจากเกณฑ์',clauses:[...clauses].join(' · ')||'-',remedy:remedy.length?'เสนอ'+remedy.join(' และ'):''}}
-function deliveryPage(){const o=chosen();if(!o||!agreed())return heading('ส่งมอบและหลักฐาน','ติดตามการส่งสินค้า ตรวจรับ และจัดการปัญหาจากข้อมูลเดียวกัน')+empty('รอทั้งสองฝ่ายยืนยันข้อตกลง','กรุณาตรวจและยืนยันร่างข้อตกลงฉบับเดียวกันก่อนเริ่มการส่งมอบ','page:contract','ไปตรวจร่างข้อตกลง');return `${heading('ส่งมอบและหลักฐาน','ST-2026-001 · '+o.name+' → ร้านอาหารครัวอุ่นใจ',`<span class="tag ${s.acceptResolution?'green':''}">${s.acceptResolution?'ตกลงแนวทางแก้ไขแล้ว':s.issue?'อยู่ระหว่างจัดการปัญหา':s.received?'ตรวจรับผ่านแล้ว':s.shipped?'รอผู้ซื้อตรวจรับ':'เตรียมส่งสินค้า'}</span>`)}<div class="split"><section class="panel pad"><div class="section-heading"><h2>บันทึกเหตุการณ์และหลักฐาน</h2><span class="tag">ข้อตกลงฉบับที่ ${s.version}</span></div><div class="timeline"><div class="event"><h3>ทั้งสองฝ่ายยืนยันร่างข้อตกลง</h3><p>รายการสินค้า 100 กิโลกรัม · ราคา ${money(o.price*100+o.shipping)} บาทรวมค่าขนส่ง</p><small>การยืนยันจำลอง ไม่มีการลงนามจริง</small></div>${s.events.map(e=>`<div class="event"><small>${esc(e.time)}</small><h3>${esc(e.title)}</h3><p>${esc(e.detail)}</p></div>`).join('')}</div>${s.evidence?`<div class="attachments"><span class="file">${icon('doc')} ${esc(s.evidence.name)} · แนบในเบราว์เซอร์เท่านั้น</span></div>`:''}${s.issue?`<details open><summary>ประเด็นที่ต้องตรวจสอบร่วมกัน</summary><div class="list"><div><span>ปริมาณตามข้อตกลง</span><strong>100 กิโลกรัม</strong></div><div><span>ปริมาณที่ผู้ซื้อบันทึก</span><strong>${issueInfo().weight} กิโลกรัม</strong></div><div><span>อุณหภูมิขณะรับ (เกณฑ์ไม่เกิน 4 °C)</span><strong>${issueInfo().temp} °C</strong></div><div><span>ประเด็นที่แจ้ง</span><strong>${esc(issueInfo().summary)}</strong></div><div><span>ข้อกำหนดที่เกี่ยวข้อง</span><strong>${issueInfo().clauses}</strong></div></div><p>ข้อมูลนี้เป็นคำแจ้งของผู้ซื้อ ยังไม่ใช่ข้อสรุปความรับผิดของฝ่ายใด ผู้ขายสามารถชี้แจงพร้อมหลักฐานได้</p>${btn('ดาวน์โหลดสรุปเรื่องและหลักฐาน','export','soft full')}</details>`:''}</section><div class="stack"><section class="panel pad">${s.role==='seller'?`<h2>${!s.shipped?'บันทึกการส่งสินค้า':s.issue?'ตอบกลับการแจ้งปัญหา':'สถานะการส่งสินค้า'}</h2>${!s.shipped?`<form id="ship-form"><div class="form-grid" style="margin-top:18px"><label class="field">เลขล็อตสินค้า<input name="lot" required value="BS-2026-001"></label><label class="field">น้ำหนักที่ส่ง (กิโลกรัม)<input name="weight" type="number" required min="1" max="10000" value="100"></label></div><label class="field" style="margin-top:15px">หลักฐานการส่งสินค้า (ไม่บังคับ)<input type="file" name="proof" accept="image/*,.pdf"></label><button type="submit" class="btn primary full" style="margin-top:18px">บันทึกส่งสินค้าเพื่อการสาธิต</button></form>`:s.issue&&!s.resolved?`<p class="muted" style="font-size:13px;margin:12px 0">ผู้ซื้อแจ้งผลตรวจรับที่ต้องตรวจสอบ โปรดอ่านรายละเอียดในไทม์ไลน์และเสนอวิธีดำเนินการ</p><form id="response-form"><label class="field">คำชี้แจงและข้อเสนอแก้ไข<textarea name="response" required>${esc(issueInfo().remedy)}</textarea></label><button class="btn primary full" style="margin-top:15px">ส่งข้อเสนอแก้ไขปัญหา</button></form>`:`<p class="muted" style="font-size:13px;margin:15px 0">${s.resolved?'ส่งคำชี้แจงและข้อเสนอแล้ว รอผู้ซื้อพิจารณา':'บันทึกการส่งสินค้าแล้ว รอผู้ซื้อบันทึกผลตรวจรับ'}</p>${btn('สลับไปยังผู้ซื้อ','role:buyer','soft full')}`}`:`<h2>ตรวจรับสินค้า</h2>${!s.shipped?`<p class="muted" style="font-size:13px;margin:15px 0">รอผู้ขายบันทึกการส่งสินค้าก่อนเริ่มตรวจรับ</p>${btn('สลับไปยังผู้ขาย','role:seller','soft full')}`:s.issue?`<p class="muted" style="font-size:13px;margin:15px 0">${s.acceptResolution?'ทั้งสองฝ่ายยอมรับแนวทางแก้ไขแล้ว ยังต้องติดตามให้ผู้ขายดำเนินการตามแนวทางที่ตกลง':s.resolved?'ผู้ขายส่งข้อเสนอแก้ไขแล้ว กรุณาตรวจคำชี้แจงในไทม์ไลน์':'แจ้งปัญหาแล้ว รอผู้ขายตรวจสอบและตอบกลับ'}</p>${s.resolved&&!s.acceptResolution?btn('ยอมรับแนวทางแก้ไขเพื่อการสาธิต','resolve','primary full'):!s.resolved?btn('สลับให้ผู้ขายตอบกลับ','role:seller','soft full'):''}`:s.received?'<div class="notice">บันทึกผลตรวจรับผ่านแล้ว ข้อมูลถูกเพิ่มในไทม์ไลน์</div>':`<form id="receive-form"><div class="form-grid" style="margin-top:18px"><label class="field">น้ำหนักที่ได้รับ (กิโลกรัม)<input name="weight" required type="number" min="0" max="10000" value="100"></label><label class="field">อุณหภูมิขณะรับ (°C)<input name="temp" required type="number" min="-30" max="60" value="3" step="0.1"></label></div><label class="field" style="margin-top:15px">รูปถ่ายหรือเอกสารประกอบ (ไม่บังคับ)<input name="proof" type="file" accept="image/*,.pdf"></label><button class="btn primary full" style="margin-top:18px">บันทึกผลตรวจรับ</button></form>${btn('ทดลองกรณีได้รับเพียง 95 กิโลกรัม','issue','danger full')}`}`}</section><section class="panel pad"><h3>สิ่งที่ควรบันทึกเมื่อตรวจรับ</h3><div class="status-list">${['เลขล็อตและฉลากสินค้า','น้ำหนักที่ชั่งได้จริง','อุณหภูมิขณะรับสินค้า','รูปถ่ายและเวลาที่ตรวจรับ'].map(t=>`<div><span>${t}</span>${icon('check')}</div>`).join('')}</div><small>ตัวอย่างเกณฑ์ตรวจรับต้องให้ผู้เชี่ยวชาญตรวจสอบก่อนใช้จริง</small></section></div></div>`}
-function render(){app.innerHTML=header()+(s.role?`<div class="layout">${sidebar()}<main id="main" class="content"><div class="breadcrumb">พื้นที่การทำงาน / คำขอซื้อ ST-2026-001 / ${s.page==='offers'?'ข้อเสนอ':s.page==='contract'?'ข้อตกลงซื้อขาย':'ส่งมอบและหลักฐาน'}</div>${s.page==='offers'?(s.role==='buyer'?offersPage():supplierPage()):s.page==='contract'?contractPage():deliveryPage()}${footer()}</main></div>`:landing());bindForms();save()}
-function revision(note){if(s.selected&&s.events.length===0)s.version=0;s.version++;s.buyer=false;s.seller=false;s.revisionNote=note;event('จัดทำร่างฉบับแก้ไขที่ '+s.version,note)}
-app.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const [a,v]=b.dataset.action.split(':');if(a==='theme'){dark=!dark;document.documentElement.classList.toggle('dark',dark);localStorage.setItem('supplytrust-theme',dark?'dark':'light')}if(a==='home')s.role=null;if(a==='role')s.role=v;if(a==='switch')s.role=s.role==='buyer'?'seller':'buyer';if(a==='page')s.page=v;if(a==='buyer-offers'){s.role='buyer';s.page='offers'}if(a==='reset'){if(!confirm('ต้องการล้างข้อมูลและเริ่มการสาธิตใหม่ทั้งหมดหรือไม่'))return;s=fresh()}if(a==='preset')s.weights=v==='cost'?[75,10,5,10]:v==='fresh'?[15,65,10,10]:v==='speed'?[15,15,60,10]:[...defaults];if(a==='choose'){if(s.shipped){toast('รายการนี้เริ่มส่งมอบแล้ว กรุณาเริ่มเดโมใหม่เพื่อเปลี่ยนผู้ขาย');return}if(s.selected!==Number(v)){s.selected=Number(v);s.amended=false;revision('สร้างร่างจากข้อเสนอของ '+chosen().name)}s.page='contract'}if(a==='freight'){if(s.role!=='seller')return;const o=chosen();if(o.shipping==null){toast('กรุณาระบุค่าขนส่งในข้อเสนอก่อน');return}o.freightConfirmed=true;revision('ผู้ขายยืนยันค่าขนส่ง '+money(o.shipping)+' บาท')}if(a==='sign'){if(!document.querySelector('#consent')?.checked){toast('กรุณายืนยันว่าได้ตรวจรายละเอียดของร่างแล้ว');return}const risk=document.querySelector('#risk-consent');if(risk&&!risk.checked){toast('กรุณารับทราบคำเตือนเรื่องอายุสินค้า');return}s[s.role]=true;event((s.role==='buyer'?'ผู้ซื้อ':'ผู้ขาย')+'ยืนยันร่างฉบับที่ '+s.version,'การยืนยันเพื่อการสาธิต ไม่ใช่ลายมือชื่อจริง');toast('บันทึกการยืนยันร่างฉบับที่ '+s.version+' แล้ว')}if(a==='docs'){const o=s.offers.find(x=>x.id===Number(v));showDocs(o);return}if(a==='print'){window.print();return}if(a==='issue'){s.actualWeight=95;s.actualTemp=3;s.issue=true;event('ผู้ซื้อแจ้งปัญหาสินค้าไม่ครบ','บันทึกรับ 95 กิโลกรัม จากข้อตกลง 100 กิโลกรัม · อุณหภูมิ 3 °C · สถานการณ์สมมติ');toast('บันทึกปัญหาแล้ว สามารถสลับให้ผู้ขายตอบกลับได้')}if(a==='resolve'){s.acceptResolution=true;event('ผู้ซื้อยอมรับแนวทางแก้ไข','ยอมรับข้อเสนอของผู้ขายตามคำชี้แจงในไทม์ไลน์ ยังไม่ถือว่าดำเนินการตามแนวทางแก้ไขเสร็จแล้ว')}if(a==='export'){download();return}render();const main=document.querySelector('#main');main.setAttribute('tabindex','-1');main.focus({preventScroll:true})});
-app.addEventListener('input',e=>{if(e.target.dataset.weight!=null){const i=+e.target.dataset.weight;s.weights[i]=+e.target.value;document.getElementById('value'+i).textContent=s.weights[i]+' / 100';const template=document.createElement('template');template.innerHTML=offersPage();document.getElementById('comparison').replaceWith(template.content.querySelector('#comparison'));save()}});
-app.addEventListener('change',e=>{if(e.target.id==='scenario'){s.scenario=e.target.value;render()}});
-function proof(form){const f=new FormData(form).get('proof');if(f?.size)s.evidence={name:f.name,type:f.type,size:f.size}}
-function bindForms(){document.querySelector('#offer-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target),o=chosen()||s.offers[1];if(s.shipped){toast('เริ่มส่งมอบแล้ว กรุณาเริ่มการสาธิตใหม่เพื่อแก้ไขข้อเสนอ');return}if(!String(f.get('terms')||'').trim()){toast('กรุณาระบุวิธีดำเนินการกรณีส่งไม่ครบ');return}Object.assign(o,{price:+f.get('price'),shipping:+f.get('shipping'),hours:+f.get('hours'),age:+f.get('age'),terms:true,termsText:f.get('terms').trim(),exception:f.get('exception').trim(),submitted:true,freightConfirmed:false});event('ผู้ขายส่งข้อเสนอฉบับแก้ไข',o.name+' · ราคา '+money(o.price)+' บาท/กก. · ค่าขนส่ง '+money(o.shipping)+' บาท');if(s.selected===o.id)revision('ปรับร่างตามข้อเสนอฉบับแก้ไขของผู้ขาย');toast('บันทึกข้อเสนอแล้ว สามารถสลับให้ผู้ซื้อพิจารณาได้');render()});document.querySelector('#revision-form')?.addEventListener('submit',e=>{e.preventDefault();const note=new FormData(e.target).get('note').trim();if(!note)return;if(s.shipped)return;revision(note);s.amended=true;chosen().termsText=note;toast('บันทึกร่างฉบับใหม่ ทั้งสองฝ่ายต้องยืนยันอีกครั้ง');render()});document.querySelector('#ship-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target);proof(e.target);s.shipped=true;event('ผู้ขายบันทึกการส่งสินค้า','ล็อต '+f.get('lot')+' · น้ำหนัก '+f.get('weight')+' กิโลกรัม'+(s.evidence?' · แนบ '+s.evidence.name:''));render()});document.querySelector('#receive-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target);proof(e.target);const weight=+f.get('weight'),temp=+f.get('temp');s.issue=weight!==100||temp>4;s.received=!s.issue;event(s.issue?'ผู้ซื้อแจ้งผลตรวจรับที่ต้องตรวจสอบ':'ผู้ซื้อบันทึกตรวจรับผ่าน','น้ำหนัก '+weight+' กิโลกรัม · อุณหภูมิ '+temp+' °C'+(s.evidence?' · แนบ '+s.evidence.name:''));s.actualWeight=weight;s.actualTemp=temp;render()});document.querySelector('#response-form')?.addEventListener('submit',e=>{e.preventDefault();const t=new FormData(e.target).get('response').trim();if(!t)return;s.resolved=true;event('ผู้ขายชี้แจงและเสนอแนวทางแก้ไข',t);render()})}
-function showDocs(o){const d=document.createElement('dialog');d.className='panel';d.style.cssText='width:min(520px,calc(100% - 32px));padding:25px;color:var(--ink);background:var(--paper)';d.innerHTML=`<div class="section-heading"><h2>เอกสารของ${esc(o.name)}</h2><button class="icon-btn" aria-label="ปิดรายละเอียด">✕</button></div><p class="muted" style="font-size:13px">สถานะสมมติ ณ วันที่สาธิต เอกสารทั้งหมดเป็นข้อมูลตัวอย่าง</p><div class="status-list">${['ทะเบียนนิติบุคคล','เอกสารสถานประกอบการ','ผลวิเคราะห์สินค้าตัวอย่าง','เอกสารระบบการผลิต'].map((n,i)=>`<div><span>${n}</span><span class="tag ${i<o.docs?'green':'amber'}">${i<o.docs?'ตรวจแล้ว':'รอตรวจสอบ'}</span></div>`).join('')}</div><div class="notice">การตรวจเอกสารไม่ใช่การรับรองคุณภาพสินค้า ความสามารถในการส่งมอบ หรือการรับประกันว่าจะไม่มีข้อพิพาท</div>`;document.body.append(d);d.querySelector('button').onclick=()=>d.close();d.addEventListener('close',()=>d.remove());d.showModal()}
-function download(){const text=['SupplyTrust — สรุปเรื่องเพื่อผู้เชี่ยวชาญ (ข้อมูลจำลอง)','คำขอซื้อ ST-2026-001','ผู้ซื้อ: ร้านอาหารครัวอุ่นใจ','ผู้ขาย: '+chosen().name,'ข้อตกลงฉบับที่ '+s.version,'ปริมาณตามข้อตกลง: 100 กิโลกรัม · อุณหภูมิขณะรับไม่เกิน 4 °C','ผลตรวจรับที่ผู้ซื้อบันทึก: '+issueInfo().weight+' กิโลกรัม · '+issueInfo().temp+' °C','ประเด็นที่แจ้ง: '+issueInfo().summary,'ข้อกำหนดที่เกี่ยวข้อง: '+issueInfo().clauses,'ข้อกำหนด: '+(chosen().termsText||'จัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่ง'),'ข้อมูลเป็นคำบันทึกของคู่ค้า ยังไม่มีข้อสรุปความรับผิด',...s.events.map(e=>e.time+' | '+e.title+' | '+e.detail),'รายการไฟล์ที่แนบ: '+(s.evidence?.name||'ไม่มี'),'สรุปนี้มีชื่อไฟล์เท่านั้น ไม่ได้รวมเนื้อหาไฟล์แนบ ต้องรวบรวมต้นฉบับแยกต่างหาก'].join('\n\n');const a=document.createElement('a'),url=URL.createObjectURL(new Blob(['\ufeff'+text],{type:'text/plain;charset=utf-8'}));a.href=url;a.download='SupplyTrust-ST-2026-001.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+import {initialOffers, rank, defaults} from './logic.js';
+
+/* ---------- helpers ---------- */
+
+const icons = {
+  shield: 'M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z M8.5 12l2.5 2.5 4.5-5',
+  arrow: 'M5 12h14m-6-6 6 6-6 6',
+  doc: 'M14 2H5v20h14V7l-5-5Z M14 2v6h5 M8 12h8 M8 16h6',
+  truck: 'M1 5h13v12H1z M14 9h5l3 4v4h-8 M5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M18 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  check: 'm5 12 4 4L19 6',
+  bag: 'M4 7h16l1 14H3L4 7Z M8 8V6a4 4 0 0 1 8 0v2',
+  download: 'M12 3v12m-5-5 5 5 5-5 M4 16v5h16v-5',
+  lock: 'M6 11h12v10H6z M8 11V7a4 4 0 0 1 8 0v4',
+  close: 'M6 6l12 12M18 6 6 18'
+};
+const icon = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[n] || icons.doc}"/></svg>`;
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const money = n => n == null ? 'รอยืนยัน' : new Intl.NumberFormat('th-TH', {maximumFractionDigits: 0}).format(n);
+const baht = n => n == null ? 'รอยืนยัน' : money(n) + ' บาท';
+const days = n => `${Math.floor(n)} วัน ${Math.round((n % 1) * 24)} ชม.`;
+const btn = (text, action, style = '') => `<button class="btn ${style}" data-action="${action}">${text}</button>`;
+const BUYER = 'ร้านอาหารครัวอุ่นใจ';
+const DOCS = ['ทะเบียนนิติบุคคล', 'เอกสารสถานประกอบการ', 'ผลวิเคราะห์สินค้าตัวอย่าง', 'เอกสารระบบการผลิต'];
+const PRESETS = {balanced: ['สมดุล', defaults], cost: ['ต้นทุน', [75, 10, 5, 10]], fresh: ['ความสด', [15, 65, 10, 10]], speed: ['ความเร็ว', [15, 15, 60, 10]]};
+
+/* ---------- state ---------- */
+
+const fresh = () => ({role: null, page: 'offers', offers: structuredClone(initialOffers), weights: [...defaults], scenario: 'normal', selected: null, version: 1, buyer: false, seller: false, amended: false, revisionNote: '', shipped: false, received: false, issue: false, resolved: false, acceptResolution: false, evidence: null, events: []});
+let s;
+try {
+  const saved = JSON.parse(localStorage.getItem('supplytrust-v1'));
+  s = saved && typeof saved === 'object' && Array.isArray(saved.offers) && Array.isArray(saved.events) && Array.isArray(saved.weights) ? {...fresh(), ...saved} : fresh();
+} catch { s = fresh(); }
+try { localStorage.removeItem('supplytrust-theme'); } catch {}
+
+const app = document.querySelector('#app');
+const save = () => { try { localStorage.setItem('supplytrust-v1', JSON.stringify(s)); } catch { toast('พื้นที่จัดเก็บเต็ม กรุณาเริ่มใหม่'); } };
+let toastTimer;
+function toast(t) {
+  const el = document.querySelector('#toast');
+  el.textContent = t;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+const event = (title, detail = '') => { s.events.push({title, detail, time: new Date().toLocaleString('th-TH', {dateStyle: 'short', timeStyle: 'short'})}); };
+const chosen = () => s.offers.find(o => o.id === s.selected);
+const agreed = () => s.buyer && s.seller;
+const other = () => s.role === 'buyer' ? 'ผู้ขาย' : 'ผู้ซื้อ';
+const otherRole = () => s.role === 'buyer' ? 'seller' : 'buyer';
+const roleName = r => r === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ขาย';
+const partyName = r => r === 'buyer' ? BUYER : chosen()?.name;
+const spinner = '<span class="spinner" aria-hidden="true"></span>';
+const waitLine = text => `<p class="waiting" role="status">${spinner}${text}</p>`;
+const doneMap = () => ({offers: !!s.selected, contract: agreed(), delivery: !!(s.received || s.acceptResolution)});
+const view = () => s.role ? s.role + ':' + s.page : 'landing';
+
+/* ---------- motion state (not persisted) ---------- */
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+const EASE = 'cubic-bezier(.2, .8, .2, 1)';
+const PAGE_ORDER = {offers: 0, contract: 1, delivery: 2};
+const ui = {
+  open: {},                 // expandable panels the user opened/closed
+  pills: {},                // last slider-pill geometry per group
+  lastView: view(),
+  prevDone: doneMap(),
+  prevIssue: s.issue,
+  seenEvents: s.events.length,
+  justSigned: null,
+  anim: {}                  // one-shot animation flags for the current render
+};
+const openAttr = (key, fallback = false) => (ui.open[key] ?? fallback) ? ' open' : '';
+const pill = '<span class="slider-pill" aria-hidden="true"></span>';
+
+/* ---------- shell ---------- */
+
+function header() {
+  const roles = s.role ? `<div class="segmented" data-slider="role" role="group" aria-label="บทบาทที่ใช้งาน">${pill}${[['buyer', 'ผู้ซื้อ'], ['seller', 'ผู้ขาย']].map(([r, l]) => `<button data-action="role:${r}" aria-pressed="${s.role === r}">${l}</button>`).join('')}</div>` : '';
+  return `<header class="header"><div class="header-inner">
+    <button class="brand" data-action="home" aria-label="SupplyTrust กลับหน้าแรก"><span class="brand-mark">${icon('shield')}</span><span class="brand-name">SupplyTrust</span></button>
+    <div class="header-right">${roles}${demoMenu()}</div>
+  </div></header>`;
+}
+
+function demoMenu() {
+  const opts = [['normal', 'ข้อเสนอปกติ 5 ราย'], ['none', 'ไม่มีรายใดผ่านเกณฑ์'], ['single', 'มีข้อเสนอรายเดียว'], ['missing', 'ข้อมูลขนส่งไม่ครบ']];
+  return `<details class="demo-menu"><summary>เดโม</summary><div class="demo-pop">
+    <p>ผู้ประกอบการ เอกสาร และการยืนยันทั้งหมดเป็นข้อมูลสมมติ ไม่มีการทำธุรกรรมจริง</p>
+    <label class="field">สถานการณ์ข้อเสนอ<select id="scenario">${opts.map(([v, l]) => `<option value="${v}" ${s.scenario === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${btn('เริ่มใหม่ทั้งหมด', 'reset', 'danger full')}
+  </div></details>`;
+}
+
+function steps() {
+  const done = doneMap();
+  const list = [['offers', s.role === 'seller' ? 'ข้อเสนอ' : 'เลือกผู้ขาย'], ['contract', 'ข้อตกลง'], ['delivery', 'ส่งมอบ']];
+  return `<nav class="steps" aria-label="ขั้นตอน"><ol data-slider="steps">${list.map(([p, l], i) => `<li${s.page === p ? ' class="active"' : ''}><button data-action="page:${p}" class="step${s.page === p ? ' current' : ''}${done[p] ? ' done' : ''}" ${s.page === p ? 'aria-current="step"' : ''}><span class="step-num${ui.anim.newDone?.includes(p) ? ' pop' : ''}">${done[p] ? icon('check') : i + 1}</span><span>${l}</span></button></li>`).join('')}<span class="slider-pill step-bar" aria-hidden="true"></span></ol></nav>`;
+}
+
+function heading(title, sub, extra = '') {
+  return `<div class="page-head"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${extra ? `<div class="page-actions">${extra}</div>` : ''}</div>`;
+}
+const requestLine = () => 'อกไก่แช่เย็น 100 กก. · ส่งเขตปทุมวัน · อายุเหลืออย่างน้อย 4 วันเมื่อส่งถึง';
+const empty = (title, desc, action, text) => `<section class="card empty"><h2>${title}</h2><p>${desc}</p>${btn(text, action, 'primary')}</section>`;
+const badge = (ok, yes = 'ยืนยันแล้ว', no = 'รอยืนยัน', pop = false) => ok ? `<span class="badge ok${pop ? ' pop' : ''}">${icon('check')}${yes}</span>` : `<span class="badge">${no}</span>`;
+
+/* ---------- landing ---------- */
+
+function landing() {
+  const card = (role, ic, title, desc, go) => `<button class="role-card" data-action="role:${role}"><span class="role-icon">${icon(ic)}</span><span class="role-title">${title}</span><span class="role-desc">${desc}</span><span class="role-go">${go}${icon('arrow')}</span></button>`;
+  return `<main id="main" class="landing">
+    <h1>ซื้อขายอย่างมั่นใจ<br>ด้วยข้อตกลงที่ชัดเจน</h1>
+    <p class="lead">เปรียบเทียบข้อเสนอ ตกลงเงื่อนไขร่วมกัน และเก็บหลักฐานการส่งมอบไว้ในที่เดียว</p>
+    <div class="roles">
+      ${card('buyer', 'bag', 'ผู้ซื้อ', 'ร้านอาหารต้องการอกไก่แช่เย็น 100 กก. เปรียบเทียบข้อเสนอแล้วเลือกผู้ขายเอง', 'เริ่มในฐานะผู้ซื้อ')}
+      ${card('seller', 'truck', 'ผู้ขาย', 'ยื่นข้อเสนอพร้อมเงื่อนไขที่ชัดเจน ยืนยันข้อตกลง และบันทึกการส่งมอบ', 'เริ่มในฐานะผู้ขาย')}
+    </div>
+  </main>`;
+}
+
+/* ---------- step 1: offers ---------- */
+
+function offersForScenario() {
+  let o = structuredClone(s.offers);
+  if (s.scenario === 'single') o = o.slice(0, 1);
+  if (s.scenario === 'missing') { o[1].shipping = null; o[2].distance = null; }
+  return o;
+}
+const dist = o => o.distance == null ? 'ไม่ทราบระยะทาง' : o.distance + ' กม.';
+
+function tags(o, best) {
+  const t = [];
+  if (o.id === best?.id) t.push(['rec', 'แนะนำ']);
+  if (!o.eligible) t.push(['bad', 'อายุสินค้าไม่ผ่านเกณฑ์']);
+  if (o.unusual) t.push(['warn', 'ค่าขนส่งต่ำผิดปกติ']);
+  if (o.shipping == null) t.push(['warn', 'ยังไม่ระบุค่าขนส่ง']);
+  if (o.distance == null) t.push(['warn', 'ไม่ทราบระยะทาง']);
+  if (!o.terms) t.push(['warn', 'ยังไม่ระบุกรณีส่งไม่ครบ']);
+  if (o.new) t.push(['', 'ผู้ขายรายใหม่']);
+  return t.length ? `<div class="tags">${t.map(([c, l]) => `<span class="tag ${c}">${l}</span>`).join('')}</div>` : '';
+}
+
+function offersPage() {
+  const rows = rank(offersForScenario(), s.weights, s.scenario);
+  const best = rows.find(o => o.eligible);
+  const labels = ['ต้นทุนรวมค่าขนส่ง', 'อายุสินค้าเหลือ', 'ระยะเวลาขนส่ง', 'เอกสารที่ตรวจแล้ว'];
+  return `${heading('เลือกผู้ขาย', requestLine())}
+    ${advice(rows, best)}
+    <section class="criteria">
+      <div class="criteria-row"><span class="criteria-label">ให้ความสำคัญกับ</span>${presets()}</div>
+      <details class="disclosure" data-panel="tune"${openAttr('tune')}><summary>ปรับน้ำหนักเอง</summary><div class="panel-body">
+        <div class="weights">${labels.map((l, i) => `<div class="weight"><label for="weight${i}"><span>${l}</span><b id="value${i}">${s.weights[i]}</b></label><input id="weight${i}" type="range" min="0" max="100" value="${s.weights[i]}" data-weight="${i}"></div>`).join('')}</div>
+        <p class="hint">ถ้าตั้งทุกด้านเป็น 0 ระบบจะใช้ค่าเริ่มต้น</p>
+      </div></details>
+    </section>
+    ${comparison(rows, best)}
+    <details class="disclosure" data-panel="calc"${openAttr('calc')}><summary>วิธีคำนวณคะแนน</summary><div class="panel-body">
+      <p>ต้นทุนรวม = ราคา × 100 กก. + ค่าขนส่ง ค่าขนส่งประมาณ = 500 + ระยะทาง × 10 บาท หากค่าขนส่งที่เสนอต่ำกว่า 70% ของค่าประมาณ จะใช้ค่าประมาณในการจัดอันดับ</p>
+      <p>อายุเหลือ = 7 วัน − อายุเมื่อออกส่ง − ชั่วโมงขนส่ง ÷ 24 ผู้ขายที่อายุสินค้าเหลือต่ำกว่า 4 วันจะอยู่ท้ายรายการเสมอ</p>
+      <p>เกณฑ์อุณหภูมิ ระยะเวลาตรวจรับ และรายการเอกสารเป็นตัวอย่าง ต้องให้ผู้เชี่ยวชาญตรวจก่อนใช้จริง</p>
+    </div></details>`;
+}
+
+function presets() {
+  return `<div id="presets" class="segmented" data-slider="preset" role="group" aria-label="ชุดน้ำหนัก">${pill}${Object.entries(PRESETS).map(([k, [l, w]]) => `<button data-action="preset:${k}" aria-pressed="${w.every((v, i) => v === s.weights[i])}">${l}</button>`).join('')}</div>`;
+}
+
+function advice(rows, best) {
+  const notes = [];
+  const cheap = [...rows].sort((a, b) => a.price - b.price)[0];
+  if (best && cheap && cheap.id !== best.id) notes.push(`${cheap.name} ราคาต่อกิโลกรัมต่ำที่สุด แต่${cheap.eligible ? `ต้นทุนรวมส่งถึง ${baht(cheap.total)} และคะแนนรวมต่ำกว่า` : 'อายุสินค้าเหลือไม่ถึงเกณฑ์'}`);
+  if (rows.some(o => o.unusual)) notes.push('บางรายเสนอค่าขนส่งต่ำกว่าค่าประมาณมาก ควรขอให้ยืนยันก่อนตกลงราคา');
+  if (rows.some(o => !o.terms)) notes.push('บางรายยังไม่ระบุวิธีจัดการกรณีส่งไม่ครบ ต้องตกลงก่อนยืนยันข้อตกลง');
+  const newbie = best && rows.find(o => o.new && o.docs >= 3 && o.eligible && o.id !== best.id);
+  if (newbie) notes.push(`${newbie.name} เป็นผู้ขายรายใหม่ที่ผ่านเกณฑ์และมีเอกสารตรวจแล้ว ${newbie.docs} รายการ เหมาะกับการทดลองสั่งรอบแรก`);
+  return `<section id="advice" class="advice">
+    ${best
+      ? `<p class="advice-title">แนะนำ ${best.name}</p><p>ต้นทุนรวมส่งถึง ${baht(best.total)} · อายุเหลือ ${days(best.remaining)} เมื่อส่งถึง · เอกสารตรวจแล้ว ${best.docs}/4</p>`
+      : '<p class="advice-title">ยังไม่มีผู้ขายที่ผ่านเกณฑ์อายุสินค้า</p><p>ลองทบทวนเงื่อนไข หรือเปิดรับข้อเสนอรอบใหม่</p>'}
+    ${notes.length ? `<ul>${notes.map(n => `<li>${n}</li>`).join('')}</ul>` : ''}
+    <p class="advice-foot">คะแนนช่วยจัดลำดับตามเกณฑ์ที่คุณตั้ง ไม่ใช่การรับรองคุณภาพ คุณเป็นผู้เลือกเอง</p>
+  </section>`;
+}
+
+function comparison(rows, best) {
+  const est = o => o.unusual || o.shipping == null;
+  const choose = (o, full = '') => btn(s.selected === o.id ? 'เลือกแล้ว' : full ? 'เลือกผู้ขายรายนี้' : 'เลือก', 'choose:' + o.id, (o.id === best?.id ? 'primary' : 'secondary') + full);
+  const freshBar = o => `<span class="fresh-bar${o.eligible ? '' : ' bad'}"><span style="width:${Math.max(0, Math.min(1, o.remaining / 7)) * 100}%"></span></span>`;
+  return `<div id="comparison">
+    <div class="list-head"><h2>ข้อเสนอ ${rows.length} ราย</h2><span class="hint">${icon('lock')}ข้อเสนอปิดผนึก ผู้ขายไม่เห็นราคาของรายอื่น</span></div>
+    <div class="card table-card desktop-offers"><div class="table-wrap"><table>
+      <thead><tr><th>ผู้ขาย</th><th class="num">ต้นทุนรวมส่งถึง</th><th>อายุเหลือเมื่อถึง</th><th class="num">ขนส่ง</th><th>เอกสาร</th><th class="num">คะแนน</th><th><span class="sr-only">การเลือก</span></th></tr></thead>
+      <tbody>${rows.map(o => `<tr data-flip="r${o.id}" class="${o.id === best?.id ? 'recommended' : ''}">
+        <td><strong>${o.name}</strong><span class="meta">${o.area} · ${dist(o)}</span>${tags(o, best)}</td>
+        <td class="num"><strong class="money">${baht(o.total)}</strong><span class="meta">${money(o.price)} บาท/กก. + ส่ง ${money(o.freight)}${est(o) ? '*' : ''}</span></td>
+        <td><span class="${o.eligible ? '' : 'bad-text'}">${days(o.remaining)}</span>${freshBar(o)}</td>
+        <td class="num">${o.hours} ชม.</td>
+        <td><button class="link" data-action="docs:${o.id}">${o.docs}/4 รายการ</button></td>
+        <td class="num"><span class="score" data-count="${o.score.toFixed(0)}">${o.score.toFixed(0)}</span></td>
+        <td class="num">${choose(o)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <p class="table-note">* ค่าขนส่งประมาณ ใช้จัดอันดับเท่านั้น ไม่ใช่ราคาที่ตกลง ผู้ขายต้องยืนยันค่าขนส่งจริงในข้อตกลง</p></div>
+    <div class="mobile-offers">${rows.map(o => `<article data-flip="c${o.id}" class="card offer-card${o.id === best?.id ? ' recommended' : ''}">
+      <div class="offer-top"><div><strong class="name">${o.name}</strong><span class="meta">${o.area} · ${dist(o)}</span></div><div class="score-big"><span data-count="${o.score.toFixed(0)}">${o.score.toFixed(0)}</span><small>คะแนน</small></div></div>
+      ${tags(o, best)}
+      <dl class="offer-stats">
+        <div><dt>ต้นทุนรวมส่งถึง</dt><dd>${baht(o.total)}</dd></div>
+        <div><dt>อายุเหลือเมื่อถึง</dt><dd class="${o.eligible ? '' : 'bad-text'}">${days(o.remaining)}</dd></div>
+        <div><dt>ราคา/กก. · ค่าส่ง</dt><dd>${money(o.price)} · ${money(o.freight)}${est(o) ? '*' : ''}</dd></div>
+        <div><dt>ขนส่ง · เอกสาร</dt><dd>${o.hours} ชม. · <button class="link" data-action="docs:${o.id}">${o.docs}/4</button></dd></div>
+      </dl>
+      ${choose(o, ' full')}
+    </article>`).join('')}
+    <p class="hint">* ค่าขนส่งประมาณ ใช้จัดอันดับเท่านั้น ไม่ใช่ราคาที่ตกลง</p></div>
+  </div>`;
+}
+
+function supplierPage() {
+  const o = chosen() || s.offers[1];
+  const field = (n, l, v, mode) => `<label class="field">${l}<input name="${n}" type="number" inputmode="${mode}" value="${v ?? ''}" required min="${n === 'hours' ? 1 : 0}" max="${n === 'age' ? 7 : 100000}" step="${n === 'price' ? '0.01' : 1}"></label>`;
+  const terms = o.terms || o.termsText ? esc(o.termsText || 'ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง โดยรับผิดชอบค่าขนส่งเพิ่มเติม') : '';
+  const status = !o.submitted ? '<span class="badge">ฉบับร่าง</span>'
+    : !s.selected ? `<span class="badge wait">${spinner}รอผู้ซื้อพิจารณา</span>`
+    : s.selected === o.id ? badge(true, 'ผู้ซื้อเลือกข้อเสนอนี้') : '<span class="badge">ผู้ซื้อเลือกรายอื่น</span>';
+  const next = o.submitted && s.selected === o.id ? `<div class="notice ok next"><p>${BUYER}เลือกข้อเสนอของคุณแล้ว ร่างข้อตกลงพร้อมให้ตรวจ</p>${btn('ไปที่ข้อตกลง', 'page:contract', 'primary')}</div>` : '';
+  return `${heading('ข้อเสนอของคุณ', requestLine(), status)}${next}
+  <div class="split">
+    <section class="card pad">
+      <h2>${esc(o.name)}</h2>
+      <form id="offer-form">
+        <div class="form-grid">
+          ${field('price', 'ราคาต่อกิโลกรัม (บาท)', o.price, 'decimal')}
+          ${field('shipping', 'ค่าขนส่ง (บาท)', o.shipping, 'numeric')}
+          ${field('hours', 'ระยะเวลาขนส่ง (ชั่วโมง)', o.hours, 'numeric')}
+          ${field('age', 'อายุสินค้าเมื่อออกส่ง (วัน)', o.age, 'numeric')}
+          <label class="field wide">หากส่งสินค้าไม่ครบ จะดำเนินการอย่างไร<textarea name="terms" required placeholder="วิธีแก้ไข ระยะเวลา และผู้รับผิดชอบค่าใช้จ่าย">${terms}</textarea></label>
+          <label class="field wide">ข้อยกเว้นหรือเงื่อนไขเพิ่มเติม<textarea name="exception" placeholder="หากไม่มี ให้ระบุว่า ไม่มี">${esc(o.exception || 'ไม่มี')}</textarea></label>
+        </div>
+        <p class="hint">ข้อเสนอมีอายุ 48 ชั่วโมง ผู้ซื้อเห็นเงื่อนไขทั้งหมดก่อนตัดสินใจ หากแก้ไขหลังมีข้อตกลงแล้ว ทั้งสองฝ่ายต้องยืนยันฉบับใหม่</p>
+        <button class="btn primary full" type="submit">${o.submitted ? 'ส่งข้อเสนอฉบับแก้ไข' : 'ส่งข้อเสนอ'}</button>
+      </form>
+    </section>
+    <aside class="stack">
+      <section class="card pad">
+        <h2>เอกสารประกอบ</h2>
+        <ul class="rows docs-list">${DOCS.map((d, i) => `<li><span>${d}</span>${badge(i < o.docs, 'ตรวจแล้ว', 'รอตรวจ')}</li>`).join('')}</ul>
+        <p class="hint">การตรวจเอกสารยืนยันว่ามีเอกสารครบและตรงกับผู้ขาย ไม่ใช่การรับรองคุณภาพสินค้าหรือการส่งมอบ</p>
+      </section>
+    </aside>
+  </div>`;
+}
+
+/* ---------- step 2: agreement ---------- */
+
+function contractPage() {
+  const o = chosen();
+  if (!o) return heading('ข้อตกลงซื้อขาย') + (s.role === 'seller'
+    ? empty('รอผู้ซื้อเลือกข้อเสนอ', 'เมื่อผู้ซื้อเลือกข้อเสนอของคุณ ระบบจะสร้างร่างข้อตกลงให้ตรวจ', 'page:offers', 'ไปที่ข้อเสนอของคุณ')
+    : empty('ยังไม่ได้เลือกผู้ขาย', 'เลือกข้อเสนอก่อน ระบบจึงจะสร้างร่างข้อตกลง', 'buyer-offers', 'ไปเลือกผู้ขาย'));
+  const r = rank([o], s.weights, s.scenario)[0];
+  const shippingConfirmed = (o.shipping != null && !r.unusual) || o.freightConfirmed;
+  const terms = o.terms || s.amended;
+  const ready = shippingConfirmed && terms;
+  const mine = s[s.role];
+  const blockers = [];
+  if (!shippingConfirmed) blockers.push(`<div class="notice warn"><p>ค่าขนส่งยังไม่ได้ยืนยัน ค่าประมาณ ${baht(r.estimate)} ใช้จัดอันดับเท่านั้น</p>${s.role === 'seller' ? btn('ยืนยันค่าขนส่ง ' + baht(o.shipping), 'freight', 'secondary') : (ui.pendingFreight ? `<span class="waiting">${spinner}รอผู้ขายยืนยันค่าขนส่ง</span>` : btn('ขอให้ผู้ขายยืนยันค่าขนส่ง', 'ask-freight', 'secondary'))}</div>`);
+  if (!terms) blockers.push('<div class="notice warn"><p>ข้อ 3 กรณีส่งมอบไม่ครบ ยังไม่ได้ตกลง ใช้ “ขอแก้ไขข้อตกลง” เพื่อเสนอเงื่อนไข</p></div>');
+  if (!r.eligible) blockers.push('<div class="notice bad"><p>อายุสินค้าเหลือต่ำกว่า 4 วัน ไม่ตรงกับคำขอซื้อ ควรตกลงแก้ไขก่อนยืนยัน</p></div>');
+  const clause = (h, p) => `<li><h3>${h}</h3><p>${p}</p></li>`;
+  return `${heading('ข้อตกลงซื้อขาย', `${esc(o.name)} → ${BUYER}`, btn(icon('download') + 'พิมพ์', 'print', 'secondary'))}
+  <div class="split">
+    <article class="card doc">
+      <header class="doc-head">
+        <h2>ข้อตกลงซื้อขายสินค้า</h2>
+        <p class="meta">เลขที่ ST-2026-001 · ฉบับที่ ${s.version}</p>
+        ${agreed() ? badge(true, 'ทั้งสองฝ่ายยืนยันแล้ว') : '<span class="badge">รอการยืนยันจากทั้งสองฝ่าย</span>'}
+      </header>
+      <dl class="terms">
+        <div><dt>ผู้ซื้อ</dt><dd>${BUYER}</dd></div>
+        <div><dt>ผู้ขาย</dt><dd>${esc(o.name)}</dd></div>
+        <div><dt>สินค้า</dt><dd>อกไก่สดแช่เย็น 100 กิโลกรัม</dd></div>
+        <div><dt>ราคาต่อกิโลกรัม</dt><dd>${baht(o.price)}</dd></div>
+        <div><dt>ค่าขนส่ง</dt><dd>${baht(o.shipping)}${shippingConfirmed ? '' : ' · รอยืนยัน'}</dd></div>
+        <div class="total"><dt>ยอดรวม</dt><dd>${baht(o.shipping == null ? null : o.price * 100 + o.shipping)}</dd></div>
+      </dl>
+      ${blockers.join('')}
+      <ol class="clauses">
+        ${clause('การส่งมอบและเกณฑ์ตรวจรับ', `จัดส่งถึงเขตปทุมวัน กรุงเทพฯ ภายใน ${o.hours} ชั่วโมงนับจากเวลาออกส่งที่บันทึก อายุสินค้าเหลือไม่น้อยกว่า 4 วัน และอุณหภูมิขณะรับไม่เกิน 4 °C`)}
+        ${clause('การตรวจรับและแจ้งปัญหา', 'ผู้ซื้อบันทึกน้ำหนัก เลขล็อต อุณหภูมิ และภาพถ่าย และแจ้งปัญหาภายใน 6 ชั่วโมงหลังรับสินค้า การบันทึกว่าสินค้ามาถึงแยกจากการยืนยันผลตรวจรับ')}
+        ${clause('กรณีส่งมอบไม่ครบ', terms ? esc(o.termsText || 'ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมงหลังทั้งสองฝ่ายยืนยันปัญหา โดยผู้ขายรับผิดชอบค่าขนส่งเพิ่มเติม') : '<span class="bad-text">ยังไม่ได้ตกลง</span>')}
+        ${clause('ความรับผิดชอบระหว่างขนส่ง', 'ผู้ขายรับผิดชอบความเสียหายระหว่างขนส่งจนกว่าผู้ซื้อจะยืนยันการรับมอบ')}
+        ${clause('เงื่อนไขเพิ่มเติม', `${esc(o.exception || 'ไม่มีข้อยกเว้นเพิ่มเติม')} · ราคาคงที่ 48 ชั่วโมงนับจากยืนยันร่วมกัน เงื่อนไขการชำระเงินตกลงแยกต่างหาก`)}
+      </ol>
+      <details class="disclosure" data-panel="history"${openAttr('history')}><summary>ประวัติการแก้ไข</summary><div class="panel-body">
+        <p>ฉบับที่ ${s.version} · ${esc(s.revisionNote || 'สร้างจากข้อเสนอที่ผู้ซื้อเลือก')}</p>
+        ${s.events.filter(e => /ร่าง|แก้ไข|เลือก/.test(e.title)).map(e => `<p>${esc(e.time)} · ${esc(e.title)}${e.detail ? ' — ' + esc(e.detail) : ''}</p>`).join('')}
+      </div></details>
+      <p class="doc-foot">ร่างตัวอย่าง ข้อสัญญาและเกณฑ์ด้านอาหารต้องให้ผู้เชี่ยวชาญด้านกฎหมายและอาหารตรวจก่อนใช้จริง</p>
+    </article>
+    <aside class="stack">
+      <section class="card pad">
+        <h2>การยืนยันฉบับที่ ${s.version}</h2>
+        <ul class="rows">${['buyer', 'seller'].map(role => `<li><span>${esc(partyName(role))}</span>${s[role] ? badge(true, undefined, undefined, ui.anim.signed === role) : mine && role === otherRole() ? `<span class="badge wait">${spinner}กำลังตรวจ</span>` : '<span class="badge">รอยืนยัน</span>'}</li>`).join('')}</ul>
+        ${agreed() ? btn('ไปที่การส่งมอบ', 'page:delivery', 'primary full')
+          : mine ? `<p class="waiting" role="status">ส่งให้${esc(partyName(otherRole()))}ตรวจแล้ว รอการยืนยัน</p>`
+          : `
+          ${ready ? '' : '<p class="hint warn-text">ยังมีเงื่อนไขที่ต้องตกลงก่อนยืนยัน</p>'}
+          <label class="check"><input type="checkbox" id="consent" ${!ready ? 'disabled' : ''}><span>ฉันได้อ่านข้อตกลงฉบับที่ ${s.version} และยอมรับเงื่อนไขทั้งหมด</span></label>
+          ${!r.eligible ? '<label class="check"><input type="checkbox" id="risk-consent"><span>รับทราบว่าอายุสินค้าไม่ผ่านเกณฑ์ที่กำหนด</span></label>' : ''}
+          <button class="btn primary full" data-action="sign" ${!ready ? 'disabled' : ''}>ยืนยันข้อตกลง</button>`}
+        <p class="hint">การเลือกผู้ขายยังไม่ใช่การตกลง ทั้งสองฝ่ายต้องยืนยันฉบับเดียวกัน และทุกการแก้ไขจะล้างการยืนยันเดิม</p>
+      </section>
+      <details class="card pad revise" data-panel="revise"${openAttr('revise', !s.shipped && !terms)}><summary>ขอแก้ไขข้อตกลง</summary><div class="panel-body">
+        ${s.shipped ? '<p class="hint">ส่งมอบแล้ว จัดการการเปลี่ยนแปลงผ่านการแจ้งปัญหา</p>' : `<form id="revision-form">
+          <label class="field">สิ่งที่ต้องการแก้ไข<textarea name="note" required placeholder="เช่น ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง และรับผิดชอบค่าขนส่ง"></textarea></label>
+          <button class="btn secondary full" type="submit">บันทึกฉบับแก้ไข</button>
+        </form>`}
+      </div></details>
+    </aside>
+  </div>`;
+}
+
+/* ---------- step 3: delivery ---------- */
+
+function issueInfo() {
+  const weight = s.actualWeight ?? 95, temp = s.actualTemp ?? 3, diff = weight - 100, hot = temp > 4;
+  const parts = [], clauses = new Set(), remedy = [];
+  if (diff < 0) { parts.push('สินค้าขาด ' + (-diff) + ' กิโลกรัม'); clauses.add('ข้อ 3 กรณีส่งมอบไม่ครบ'); remedy.push('จัดส่งสินค้าเพิ่มเติม ' + (-diff) + ' กิโลกรัมภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่งเพิ่มเติม'); }
+  if (diff > 0) { parts.push('สินค้าเกิน ' + diff + ' กิโลกรัม'); clauses.add('ข้อ 1 การส่งมอบและเกณฑ์ตรวจรับ'); remedy.push('รับคืนสินค้าส่วนเกิน ' + diff + ' กิโลกรัม หรือให้ผู้ซื้อเลือกเก็บไว้และชำระตามราคาต่อกิโลกรัมที่ตกลง'); }
+  if (hot) { parts.push('อุณหภูมิขณะรับ ' + temp + ' °C สูงกว่าเกณฑ์ 4 °C'); clauses.add('ข้อ 1 การส่งมอบและเกณฑ์ตรวจรับ'); clauses.add('ข้อ 4 ความรับผิดชอบระหว่างขนส่ง'); remedy.push('เปลี่ยนสินค้าที่อุณหภูมิเกินเกณฑ์ภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่ง'); }
+  return {weight, temp, diff, hot, summary: parts.join(' และ ') || 'ไม่พบความคลาดเคลื่อนจากเกณฑ์', clauses: [...clauses].join(' · ') || '-', remedy: remedy.length ? 'เสนอ' + remedy.join(' และ') : ''};
+}
+
+function deliveryPage() {
+  const o = chosen();
+  if (!o || !agreed()) return heading('ส่งมอบและหลักฐาน') + empty('รอทั้งสองฝ่ายยืนยันข้อตกลง', 'เมื่อผู้ซื้อและผู้ขายยืนยันข้อตกลงฉบับเดียวกันแล้ว จึงเริ่มส่งมอบได้', 'page:contract', 'ไปที่ข้อตกลง');
+  const [cls, label] = s.acceptResolution ? ['ok', 'ตกลงแนวทางแก้ไขแล้ว'] : s.issue ? ['warn', 'กำลังจัดการปัญหา'] : s.received ? ['ok', 'ตรวจรับผ่าน'] : s.shipped ? ['', 'รอผู้ซื้อตรวจรับ'] : ['', 'รอผู้ขายส่งสินค้า'];
+  return `${heading('ส่งมอบและหลักฐาน', `${esc(o.name)} → ${BUYER} · ${baht(o.price * 100 + o.shipping)} รวมค่าขนส่ง`, `<span class="badge ${cls}">${label}</span>`)}
+  <div class="split">
+    <div class="stack">
+      ${s.issue ? issueCard() : ''}
+      <section class="card pad">
+        <div class="card-head"><h2>บันทึกเหตุการณ์</h2><span class="meta">ข้อตกลงฉบับที่ ${s.version}</span></div>
+        <ol class="timeline">${s.events.map((e, i) => `<li${i >= (ui.anim.newEventsFrom ?? Infinity) ? ` class="new" style="animation-delay:${(i - ui.anim.newEventsFrom) * 70}ms"` : ''}><span class="meta">${esc(e.time)}</span><h3>${esc(e.title)}</h3>${e.detail ? `<p>${esc(e.detail)}</p>` : ''}</li>`).join('')}</ol>
+        ${s.evidence ? `<p class="file">${icon('doc')}${esc(s.evidence.name)}<span class="meta">เก็บเฉพาะชื่อไฟล์ในเบราว์เซอร์</span></p>` : ''}
+      </section>
+    </div>
+    <aside class="stack">${actionCard()}</aside>
+  </div>`;
+}
+
+function issueCard() {
+  const i = issueInfo();
+  return `<section class="card pad issue${ui.anim.issueEnter ? ' enter' : ''}">
+    <h2>ประเด็นที่ต้องตรวจสอบ</h2>
+    <p class="issue-summary"><strong>${esc(i.summary)}</strong></p>
+    <dl class="terms">
+      <div><dt>ตามข้อตกลง</dt><dd>100 กิโลกรัม · ไม่เกิน 4 °C</dd></div>
+      <div><dt>ผู้ซื้อบันทึก</dt><dd>${i.weight} กิโลกรัม · ${i.temp} °C</dd></div>
+      <div><dt>ข้อกำหนดที่เกี่ยวข้อง</dt><dd>${i.clauses}</dd></div>
+    </dl>
+    <p class="hint">เป็นข้อมูลที่ผู้ซื้อแจ้ง ยังไม่ใช่ข้อสรุปว่าฝ่ายใดต้องรับผิด ผู้ขายชี้แจงพร้อมหลักฐานได้</p>
+    ${btn(icon('download') + 'ดาวน์โหลดสรุปสำหรับผู้เชี่ยวชาญ', 'export', 'secondary full')}
+  </section>`;
+}
+
+function actionCard() {
+  const wrap = (title, body) => `<section class="card pad"><h2>${title}</h2>${body}</section>`;
+  const say = t => `<p class="hint">${t}</p>`;
+  if (s.role === 'seller') {
+    if (!s.shipped) return wrap('บันทึกการส่งสินค้า', `<form id="ship-form">
+      <div class="form-grid">
+        <label class="field">เลขล็อตสินค้า<input name="lot" required value="BS-2026-001"></label>
+        <label class="field">น้ำหนักที่ส่ง (กก.)<input name="weight" type="number" inputmode="numeric" required min="1" max="10000" value="100"></label>
+        <label class="field wide">หลักฐานการส่ง (ไม่บังคับ)<input type="file" name="proof" accept="image/*,.pdf"></label>
+      </div>
+      <button type="submit" class="btn primary full">บันทึกการส่งสินค้า</button>
+    </form>`);
+    if (s.issue && !s.resolved) return wrap('ตอบกลับการแจ้งปัญหา', `${say('อ่านรายละเอียดที่ผู้ซื้อแจ้ง แล้วเสนอวิธีแก้ไข')}<form id="response-form">
+      <label class="field">คำชี้แจงและข้อเสนอแก้ไข<textarea name="response" required>${esc(issueInfo().remedy)}</textarea></label>
+      <button class="btn primary full">ส่งข้อเสนอแก้ไข</button>
+    </form>`);
+    if (s.acceptResolution) return wrap('สถานะการส่งสินค้า', say('ผู้ซื้อยอมรับแนวทางแก้ไขแล้ว ดำเนินการตามที่เสนอ'));
+    if (s.received) return wrap('สถานะการส่งสินค้า', '<div class="notice ok"><p>ผู้ซื้อตรวจรับผ่านแล้ว</p></div>');
+    return wrap('สถานะการส่งสินค้า', waitLine(s.resolved ? 'ส่งข้อเสนอแก้ไขแล้ว รอผู้ซื้อพิจารณา' : 'บันทึกการส่งแล้ว รอผู้ซื้อตรวจรับ'));
+  }
+  if (!s.shipped) return wrap('ตรวจรับสินค้า', waitLine(`รอ${esc(chosen().name)}ส่งสินค้า`));
+  if (s.issue) {
+    if (s.acceptResolution) return wrap('ตรวจรับสินค้า', say('ทั้งสองฝ่ายยอมรับแนวทางแก้ไขแล้ว ยังต้องติดตามให้ผู้ขายดำเนินการตามที่ตกลง'));
+    if (s.resolved) return wrap('ข้อเสนอจากผู้ขาย', say('ผู้ขายส่งคำชี้แจงและข้อเสนอแก้ไขแล้ว ดูรายละเอียดในบันทึกเหตุการณ์') + btn('ยอมรับแนวทางแก้ไข', 'resolve', 'primary full'));
+    return wrap('ตรวจรับสินค้า', waitLine('แจ้งปัญหาแล้ว รอผู้ขายตรวจสอบและเสนอวิธีแก้ไข'));
+  }
+  if (s.received) return wrap('ตรวจรับสินค้า', '<div class="notice ok"><p>ตรวจรับผ่านแล้ว บันทึกไว้ในเหตุการณ์</p></div>');
+  return wrap('ตรวจรับสินค้า', `<form id="receive-form">
+      <div class="form-grid">
+        <label class="field">น้ำหนักที่ได้รับ (กก.)<input name="weight" required type="number" inputmode="decimal" min="0" max="10000" value="100"></label>
+        <label class="field">อุณหภูมิขณะรับ (°C)<input name="temp" required type="number" inputmode="decimal" min="-30" max="60" value="3" step="0.1"></label>
+        <label class="field wide">รูปถ่ายหรือเอกสาร (ไม่บังคับ)<input name="proof" type="file" accept="image/*,.pdf"></label>
+      </div>
+      <button class="btn primary full">บันทึกผลตรวจรับ</button>
+    </form>
+    <div class="try"><span class="meta">ลองสถานการณ์</span>${btn('สินค้าขาด 5 กก.', 'issue', 'chip')}${btn('อุณหภูมิ 7 °C', 'issue:temp', 'chip')}</div>`);
+}
+
+/* ---------- render & events ---------- */
+
+function page() {
+  if (s.page === 'contract') return contractPage();
+  if (s.page === 'delivery') return deliveryPage();
+  return s.role === 'buyer' ? offersPage() : supplierPage();
+}
+
+function render() {
+  app.innerHTML = header() + (s.role ? `${steps()}<main id="main" class="content" tabindex="-1">${page()}</main>` : landing());
+  bindForms();
+  save();
+}
+
+/* ---------- motion ---------- */
+
+const motionOK = () => !reduce.matches;
+
+// Work out one-shot animation flags by comparing with the previous render.
+function prepareAnim(sameView) {
+  const done = doneMap();
+  ui.anim = {
+    newDone: sameView ? Object.keys(done).filter(k => done[k] && !ui.prevDone[k]) : [],
+    signed: sameView ? ui.justSigned : null,
+    newEventsFrom: sameView && s.page === 'delivery' && s.events.length > ui.seenEvents ? ui.seenEvents : null,
+    issueEnter: sameView && s.issue && !ui.prevIssue
+  };
+  if (!motionOK()) ui.anim = {};
+}
+// The other party acts on their own after a short wait, like a real counterpart.
+// Each task is derived from state; if the state changes first (or the user switches
+// to play the other side), the pending task is cancelled.
+const REPLY_MS = 3500;
+let reply = {key: null, timer: null};
+function counterpartTask() {
+  if (!s.role) return null;
+  const o = chosen();
+  if (s.role === 'seller' && !s.selected) {
+    const mine = s.offers[1];
+    if (!mine.submitted) return null;
+    return {key: 'select', run: () => {
+      s.selected = mine.id;
+      s.amended = false;
+      revision('สร้างร่างจากข้อเสนอของ ' + mine.name);
+      toast(BUYER + 'เลือกข้อเสนอของคุณแล้ว');
+    }};
+  }
+  if (!o) return null;
+  if (!agreed()) {
+    const role = otherRole();
+    if (!s[s.role] || s[role]) return null;
+    return {key: 'sign:' + role + ':' + s.version, run: () => {
+      s[role] = true;
+      ui.justSigned = role;
+      event(roleName(role) + 'ยืนยันข้อตกลงฉบับที่ ' + s.version);
+      toast(partyName(role) + ' ยืนยันข้อตกลงฉบับที่ ' + s.version + ' แล้ว');
+    }};
+  }
+  if (s.role === 'buyer') {
+    if (!s.shipped) return {key: 'ship', run: () => {
+      s.shipped = true;
+      s.shippedWeight = 100;
+      event('ผู้ขายบันทึกการส่งสินค้า', 'ล็อต BS-2026-001 · น้ำหนัก 100 กิโลกรัม');
+      toast(o.name + ' ส่งสินค้าแล้ว');
+    }};
+    if (s.issue && !s.resolved) return {key: 'respond', run: () => {
+      s.resolved = true;
+      event('ผู้ขายชี้แจงและเสนอแนวทางแก้ไข', issueInfo().remedy);
+      toast(o.name + ' ส่งข้อเสนอแก้ไขแล้ว');
+    }};
+  }
+  if (s.role === 'seller') {
+    if (s.shipped && !s.received && !s.issue) return {key: 'receive', run: () => {
+      recordReceipt(s.shippedWeight ?? 100, 3);
+      toast(s.issue ? BUYER + ' แจ้งผลตรวจรับที่ต้องตรวจสอบ' : BUYER + ' ตรวจรับผ่านแล้ว');
+    }};
+    if (s.resolved && !s.acceptResolution) return {key: 'accept', run: () => {
+      s.acceptResolution = true;
+      event('ผู้ซื้อยอมรับแนวทางแก้ไข', 'ยังไม่ถือว่าดำเนินการตามแนวทางแก้ไขเสร็จแล้ว');
+      toast(BUYER + ' ยอมรับแนวทางแก้ไขแล้ว');
+    }};
+  }
+  return null;
+}
+function scheduleCounterpart() {
+  const task = counterpartTask();
+  if (task?.key === reply.key) return;
+  clearTimeout(reply.timer);
+  reply = {key: task?.key ?? null, timer: null};
+  if (!task) return;
+  reply.timer = setTimeout(() => {
+    const now = counterpartTask();
+    reply = {key: null, timer: null};
+    if (now?.key !== task.key) { scheduleCounterpart(); return; }
+    now.run();
+    update();
+  }, REPLY_MS);
+}
+
+function recordReceipt(weight, temp) {
+  s.issue = weight !== 100 || temp > 4;
+  s.received = !s.issue;
+  s.actualWeight = weight;
+  s.actualTemp = temp;
+  event(s.issue ? 'ผู้ซื้อแจ้งผลตรวจรับที่ต้องตรวจสอบ' : 'ผู้ซื้อตรวจรับผ่าน', 'น้ำหนัก ' + weight + ' กิโลกรัม · อุณหภูมิ ' + temp + ' °C' + (s.evidence ? ' · แนบ ' + s.evidence.name : ''));
+}
+
+function afterRender() {
+  queueMicrotask(scheduleCounterpart);
+  ui.prevDone = doneMap();
+  ui.prevIssue = s.issue;
+  ui.seenEvents = s.events.length;
+  ui.justSigned = null;
+  ui.anim = {};
+  ui.lastView = view();
+}
+
+// #1 / #2 Sliding pill under the active segmented option or step.
+function placePills(animate) {
+  document.querySelectorAll('[data-slider]').forEach(group => {
+    const key = group.dataset.slider;
+    const p = group.querySelector(':scope > .slider-pill');
+    const active = key === 'steps' ? group.querySelector(':scope > li.active') : group.querySelector(':scope > button[aria-pressed="true"]');
+    if (!p) return;
+    const next = active ? {x: active.offsetLeft, w: active.offsetWidth, on: 1} : {...(ui.pills[key] || {x: 0, w: 0}), on: 0};
+    const prev = ui.pills[key];
+    p.style.transition = 'none';
+    if (animate && prev && motionOK()) {
+      p.style.transform = `translateX(${prev.x}px)`;
+      p.style.width = prev.w + 'px';
+      p.style.opacity = prev.on;
+      p.getBoundingClientRect();
+      p.style.transition = '';
+    }
+    p.style.transform = `translateX(${next.x}px)`;
+    p.style.width = next.w + 'px';
+    p.style.opacity = next.on;
+    ui.pills[key] = next;
+  });
+}
+
+// #3 FLIP: remember where ranked items were and what score they showed.
+function measure() {
+  const m = {};
+  document.querySelectorAll('[data-flip]').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.height) m[el.dataset.flip] = {top: r.top, score: Number(el.querySelector('[data-count]')?.dataset.count)};
+  });
+  return m;
+}
+function playFlip(m) {
+  if (!m || !motionOK()) return;
+  document.querySelectorAll('[data-flip]').forEach(el => {
+    const old = m[el.dataset.flip];
+    const r = el.getBoundingClientRect();
+    if (!old || !r.height) return;
+    const dy = old.top - r.top;
+    if (Math.abs(dy) > 1) el.animate([{transform: `translateY(${dy}px)`}, {transform: 'none'}], {duration: 420, easing: EASE});
+    const c = el.querySelector('[data-count]');
+    if (c && Number.isFinite(old.score) && old.score !== Number(c.dataset.count)) countTo(c, old.score, Number(c.dataset.count));
+  });
+}
+function countTo(el, from, to) {
+  const start = performance.now();
+  const tick = now => {
+    const k = Math.min(1, (now - start) / 450);
+    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// #4 Fade the recommendation when the recommended supplier changes.
+function fadeAdvice(prevTitle) {
+  const now = document.querySelector('.advice-title')?.textContent;
+  if (!motionOK() || prevTitle == null || now === prevTitle) return;
+  document.querySelectorAll('#advice > *').forEach((el, i) => el.animate([{opacity: 0, transform: 'translateY(4px)'}, {opacity: 1, transform: 'none'}], {duration: 320, delay: i * 40, easing: EASE, fill: 'backwards'}));
+}
+
+// Same-view update: keep the screen, animate what changed.
+function renderInPlace() {
+  const flip = measure();
+  const prevTitle = document.querySelector('.advice-title')?.textContent;
+  prepareAnim(true);
+  render();
+  placePills(true);
+  playFlip(flip);
+  fadeAdvice(prevTitle);
+  afterRender();
+}
+
+// #2 / #9 View change: browser view transition (or CSS fallback).
+function renderNewView(source) {
+  const from = ui.lastView, to = view();
+  const dir = from === 'landing' ? 'hero'
+    : to === 'landing' ? 'fade'
+    : PAGE_ORDER[s.page] > PAGE_ORDER[from.split(':')[1]] ? 'forward'
+    : PAGE_ORDER[s.page] < PAGE_ORDER[from.split(':')[1]] ? 'back' : 'fade';
+  const swap = () => {
+    prepareAnim(false);
+    render();
+    window.scrollTo(0, 0);
+    if (dir === 'hero') document.querySelector('#main')?.style.setProperty('view-transition-name', 'hero');
+    placePills(true);
+    afterRender();
+  };
+  const focusMain = () => document.querySelector('#main')?.focus({preventScroll: true});
+  if (!motionOK()) { swap(); focusMain(); return; }
+  if (!document.startViewTransition) {
+    swap();
+    document.querySelector('#main')?.classList.add('enter-' + dir);
+    focusMain();
+    return;
+  }
+  document.documentElement.dataset.vt = dir;
+  if (dir === 'hero' && source) source.style.viewTransitionName = 'hero';
+  const t = document.startViewTransition(swap);
+  t.finished.finally(() => {
+    delete document.documentElement.dataset.vt;
+    document.querySelector('#main')?.style.removeProperty('view-transition-name');
+    focusMain();
+  });
+}
+
+function update(source) {
+  if (view() === ui.lastView) renderInPlace();
+  else renderNewView(source);
+}
+
+// #5 Expandable panels: animate height, remember open state across renders.
+app.addEventListener('click', e => {
+  const summary = e.target.closest('details[data-panel] > summary');
+  if (!summary) return;
+  e.preventDefault();
+  const d = summary.parentElement;
+  const body = d.querySelector(':scope > .panel-body');
+  const opening = !d.open || d.classList.contains('closing');
+  ui.open[d.dataset.panel] = opening;
+  d.getAnimations({subtree: true}).forEach(a => a.cancel());
+  d.classList.remove('closing');
+  if (!motionOK() || !body) { d.open = opening; return; }
+  body.style.overflow = 'hidden';
+  const done = () => { body.style.overflow = ''; };
+  if (opening) {
+    d.open = true;
+    body.animate([{height: '0px', opacity: 0}, {height: body.scrollHeight + 'px', opacity: 1}], {duration: 300, easing: EASE}).onfinish = done;
+  } else {
+    d.classList.add('closing');
+    body.animate([{height: body.offsetHeight + 'px', opacity: 1}, {height: '0px', opacity: 0}], {duration: 220, easing: EASE}).onfinish = () => { d.open = false; d.classList.remove('closing'); done(); };
+  }
+});
+
+// Close the demo menu when clicking elsewhere.
+document.addEventListener('click', e => {
+  const m = document.querySelector('.demo-menu[open]');
+  if (m && !m.contains(e.target)) m.open = false;
+});
+
+function revision(note) {
+  if (s.selected && s.events.length === 0) s.version = 0;
+  s.version++;
+  s.buyer = false;
+  s.seller = false;
+  s.revisionNote = note;
+  event('จัดทำร่างฉบับที่ ' + s.version, note);
+}
+
+app.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  const [a, v] = b.dataset.action.split(':');
+  if (a === 'home') s.role = null;
+  if (a === 'role') s.role = v;
+  if (a === 'switch') s.role = s.role === 'buyer' ? 'seller' : 'buyer';
+  if (a === 'page') s.page = v;
+  if (a === 'buyer-offers') { s.role = 'buyer'; s.page = 'offers'; }
+  if (a === 'reset') { if (!confirm('ล้างข้อมูลและเริ่มเดโมใหม่ทั้งหมดหรือไม่')) return; s = fresh(); ui.open = {}; ui.pendingFreight = false; clearTimeout(reply.timer); reply = {key: null, timer: null}; }
+  if (a === 'preset') s.weights = [...(PRESETS[v] || PRESETS.balanced)[1]];
+  if (a === 'choose') {
+    if (s.shipped) { toast('เริ่มส่งมอบแล้ว ต้องเริ่มเดโมใหม่เพื่อเปลี่ยนผู้ขาย'); return; }
+    if (s.selected !== Number(v)) { s.selected = Number(v); s.amended = false; revision('สร้างร่างจากข้อเสนอของ ' + chosen().name); }
+    s.page = 'contract';
+  }
+  if (a === 'ask-freight') {
+    if (ui.pendingFreight) return;
+    const o = chosen();
+    ui.pendingFreight = true;
+    event('ผู้ซื้อขอให้ผู้ขายยืนยันค่าขนส่ง', o.name + ' · ' + baht(o.shipping));
+    setTimeout(() => {
+      ui.pendingFreight = false;
+      if (chosen() === o && !o.freightConfirmed) {
+        o.freightConfirmed = true;
+        revision('ผู้ขายยืนยันค่าขนส่ง ' + baht(o.shipping));
+        toast(o.name + ' ยืนยันค่าขนส่ง ' + baht(o.shipping) + ' แล้ว');
+      }
+      update();
+    }, 3000);
+  }
+  if (a === 'freight') {
+    if (s.role !== 'seller') return;
+    const o = chosen();
+    if (o.shipping == null) { toast('กรุณาระบุค่าขนส่งในข้อเสนอก่อน'); return; }
+    o.freightConfirmed = true;
+    revision('ผู้ขายยืนยันค่าขนส่ง ' + baht(o.shipping));
+  }
+  if (a === 'sign') {
+    if (!document.querySelector('#consent')?.checked) { toast('กรุณายืนยันว่าได้อ่านข้อตกลงแล้ว'); return; }
+    const risk = document.querySelector('#risk-consent');
+    if (risk && !risk.checked) { toast('กรุณารับทราบเรื่องอายุสินค้า'); return; }
+    s[s.role] = true;
+    ui.justSigned = s.role;
+    event((s.role === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ขาย') + 'ยืนยันข้อตกลงฉบับที่ ' + s.version);
+    toast('ยืนยันแล้ว ส่งให้' + partyName(otherRole()) + 'ตรวจ');
+  }
+  if (a === 'docs') { showDocs(s.offers.find(x => x.id === Number(v))); return; }
+  if (a === 'print') { window.print(); return; }
+  if (a === 'issue') {
+    const temp = v === 'temp';
+    s.actualWeight = temp ? 100 : 95;
+    s.actualTemp = temp ? 7 : 3;
+    s.issue = true;
+    event('ผู้ซื้อแจ้งผลตรวจรับที่ต้องตรวจสอบ', `น้ำหนัก ${s.actualWeight} กิโลกรัม · อุณหภูมิ ${s.actualTemp} °C`);
+    toast('แจ้งปัญหาแล้ว รอผู้ขายตอบกลับ');
+  }
+  if (a === 'resolve') { s.acceptResolution = true; event('ผู้ซื้อยอมรับแนวทางแก้ไข', 'ยังไม่ถือว่าดำเนินการตามแนวทางแก้ไขเสร็จแล้ว'); }
+  if (a === 'export') { download(); return; }
+  update(b);
+});
+
+app.addEventListener('input', e => {
+  if (e.target.dataset.weight == null) return;
+  const i = +e.target.dataset.weight;
+  s.weights[i] = +e.target.value;
+  document.getElementById('value' + i).textContent = s.weights[i];
+  const flip = measure();
+  const prevTitle = document.querySelector('.advice-title')?.textContent;
+  const t = document.createElement('template');
+  t.innerHTML = offersPage();
+  for (const id of ['advice', 'comparison', 'presets']) document.getElementById(id).replaceWith(t.content.getElementById(id));
+  placePills(true);
+  playFlip(flip);
+  fadeAdvice(prevTitle);
+  save();
+});
+
+app.addEventListener('change', e => { if (e.target.id === 'scenario') { s.scenario = e.target.value; update(); } });
+
+function proof(form) { const f = new FormData(form).get('proof'); if (f?.size) s.evidence = {name: f.name, type: f.type, size: f.size}; }
+
+function bindForms() {
+  const on = (id, fn) => document.querySelector(id)?.addEventListener('submit', e => { e.preventDefault(); fn(new FormData(e.target), e.target); });
+  on('#offer-form', f => {
+    const o = chosen() || s.offers[1];
+    if (s.shipped) { toast('เริ่มส่งมอบแล้ว ต้องเริ่มเดโมใหม่เพื่อแก้ไขข้อเสนอ'); return; }
+    if (!String(f.get('terms') || '').trim()) { toast('กรุณาระบุวิธีดำเนินการกรณีส่งไม่ครบ'); return; }
+    Object.assign(o, {price: +f.get('price'), shipping: +f.get('shipping'), hours: +f.get('hours'), age: +f.get('age'), terms: true, termsText: f.get('terms').trim(), exception: f.get('exception').trim(), submitted: true, freightConfirmed: false});
+    event('ผู้ขายส่งข้อเสนอฉบับแก้ไข', o.name + ' · ' + money(o.price) + ' บาท/กก. · ค่าขนส่ง ' + baht(o.shipping));
+    if (s.selected === o.id) revision('ปรับร่างตามข้อเสนอฉบับแก้ไขของผู้ขาย');
+    toast(s.selected ? 'ส่งข้อเสนอฉบับแก้ไขแล้ว' : 'ส่งข้อเสนอแล้ว รอผู้ซื้อพิจารณา');
+    update();
+  });
+  on('#revision-form', f => {
+    const note = f.get('note').trim();
+    if (!note || s.shipped) return;
+    revision(note);
+    s.amended = true;
+    chosen().termsText = note;
+    toast('บันทึกฉบับใหม่แล้ว ทั้งสองฝ่ายต้องยืนยันอีกครั้ง');
+    update();
+  });
+  on('#ship-form', (f, form) => {
+    proof(form);
+    s.shipped = true;
+    s.shippedWeight = +f.get('weight');
+    event('ผู้ขายบันทึกการส่งสินค้า', 'ล็อต ' + f.get('lot') + ' · น้ำหนัก ' + f.get('weight') + ' กิโลกรัม' + (s.evidence ? ' · แนบ ' + s.evidence.name : ''));
+    update();
+  });
+  on('#receive-form', (f, form) => {
+    proof(form);
+    recordReceipt(+f.get('weight'), +f.get('temp'));
+    update();
+  });
+  on('#response-form', f => {
+    const t = f.get('response').trim();
+    if (!t) return;
+    s.resolved = true;
+    event('ผู้ขายชี้แจงและเสนอแนวทางแก้ไข', t);
+    update();
+  });
+}
+
+function showDocs(o) {
+  const d = document.createElement('dialog');
+  d.className = 'sheet';
+  d.innerHTML = `<div class="card-head"><h2>เอกสารของ${esc(o.name)}</h2><button class="icon-btn" aria-label="ปิดรายละเอียด">${icon('close')}</button></div>
+    <ul class="rows">${DOCS.map((n, i) => `<li><span>${n}</span>${badge(i < o.docs, 'ตรวจแล้ว', 'รอตรวจ')}</li>`).join('')}</ul>
+    <p class="hint">การตรวจเอกสารไม่ใช่การรับรองคุณภาพสินค้า ความสามารถในการส่งมอบ หรือการรับประกันว่าจะไม่มีข้อพิพาท</p>`;
+  document.body.append(d);
+  const close = () => {
+    if (!motionOK() || d.dataset.closing) { d.close(); return; }
+    d.dataset.closing = '1';
+    const phone = matchMedia('(max-width: 540px)').matches;
+    d.animate([{opacity: 1, transform: 'none'}, {opacity: 0, transform: phone ? 'translateY(40%)' : 'scale(.96)'}], {duration: 180, easing: 'ease-in', fill: 'forwards'}).onfinish = () => d.close();
+  };
+  d.querySelector('button').onclick = close;
+  d.addEventListener('click', e => { if (e.target === d) close(); });
+  d.addEventListener('cancel', e => { e.preventDefault(); close(); });
+  d.addEventListener('close', () => d.remove());
+  d.showModal();
+}
+
+function download() {
+  const i = issueInfo();
+  const text = [
+    'SupplyTrust — สรุปเรื่องสำหรับผู้เชี่ยวชาญ (ข้อมูลจำลอง)',
+    'คำขอซื้อ ST-2026-001',
+    'ผู้ซื้อ: ' + BUYER,
+    'ผู้ขาย: ' + chosen().name,
+    'ข้อตกลงฉบับที่ ' + s.version,
+    'ตามข้อตกลง: 100 กิโลกรัม · อุณหภูมิขณะรับไม่เกิน 4 °C',
+    'ผลตรวจรับที่ผู้ซื้อบันทึก: ' + i.weight + ' กิโลกรัม · ' + i.temp + ' °C',
+    'ประเด็นที่แจ้ง: ' + i.summary,
+    'ข้อกำหนดที่เกี่ยวข้อง: ' + i.clauses,
+    'ข้อกำหนดกรณีส่งไม่ครบ: ' + (chosen().termsText || 'จัดส่งส่วนที่ขาดภายใน 24 ชั่วโมง โดยผู้ขายรับผิดชอบค่าขนส่ง'),
+    'ข้อมูลเป็นคำบันทึกของคู่ค้า ยังไม่มีข้อสรุปความรับผิด',
+    ...s.events.map(e => e.time + ' | ' + e.title + (e.detail ? ' | ' + e.detail : '')),
+    'ไฟล์ที่แนบ: ' + (s.evidence?.name || 'ไม่มี'),
+    'สรุปนี้มีเฉพาะชื่อไฟล์ ไม่ได้รวมเนื้อหาไฟล์แนบ ต้องรวบรวมต้นฉบับแยกต่างหาก'
+  ].join('\n\n');
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(new Blob(['﻿' + text], {type: 'text/plain;charset=utf-8'}));
+  a.href = url;
+  a.download = 'SupplyTrust-ST-2026-001.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 render();
+placePills(false);
+afterRender();
+document.fonts?.ready.then(() => placePills(false));
+let resizeFrame;
+addEventListener('resize', () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(() => placePills(false)); });
