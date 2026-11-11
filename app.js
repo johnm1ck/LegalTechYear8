@@ -217,6 +217,41 @@ function comparison(rows, best) {
   </div>`;
 }
 
+// What the buyer asked for, checked live against the seller's current form values.
+function buyerBrief(o, v = {}) {
+  const val = k => v[k] ?? o[k];
+  const num = k => { const n = val(k); return n === '' || n == null ? null : +n; };
+  const age = num('age'), hours = num('hours'), shipping = num('shipping');
+  const terms = (v.terms ?? (o.terms || o.termsText ? (o.termsText || 'x') : '')).trim();
+  const left = age == null || hours == null ? null : 7 - age - hours / 24;
+  const mark = st => `<span class="need-mark ${st}" aria-hidden="true">${st === 'ok' ? icon('check') : st === 'bad' || st === 'warn' ? '!' : '·'}</span>`;
+  const need = (st, label, yours) => `<li class="${st}">${mark(st)}<span class="need-label">${label}</span><span class="need-yours">${yours}</span></li>`;
+  const needs = [
+    need('info', 'อกไก่สดแช่เย็น 100 กิโลกรัม', 'ตามคำขอ'),
+    need(hours == null ? 'warn' : 'info', 'ส่งถึงเขตปทุมวัน กรุงเทพฯ', hours == null ? 'ยังไม่ระบุเวลาขนส่ง' : `ของคุณ ${hours} ชม.`),
+    need(left == null ? 'warn' : left >= 4 ? 'ok' : 'bad', 'อายุสินค้าเหลืออย่างน้อย 4 วันเมื่อส่งถึง', left == null ? 'ยังไม่ระบุ' : `ของคุณ ${days(Math.max(0, left))}`),
+    need('info', 'อุณหภูมิขณะรับไม่เกิน 4 °C', 'ตรวจตอนรับสินค้า'),
+    need(shipping == null ? 'warn' : 'ok', 'ระบุค่าขนส่งชัดเจน', shipping == null ? 'ยังไม่ระบุ' : baht(shipping)),
+    need(terms ? 'ok' : 'warn', 'มีวิธีแก้ไขกรณีส่งไม่ครบ', terms ? 'ระบุแล้ว' : 'ยังไม่ระบุ'),
+    need(o.docs >= 4 ? 'ok' : 'warn', 'เอกสารประกอบครบ 4 รายการ', `ตรวจแล้ว ${o.docs}/4`),
+  ];
+  const total = s.weights.reduce((a, b) => a + b, 0) || 1;
+  const names = ['ต้นทุนรวม', 'ความสด', 'ความเร็ว', 'เอกสาร'];
+  const top = s.weights.indexOf(Math.max(...s.weights));
+  const prio = names.map((n, i) => { const pct = Math.round(s.weights[i] / total * 100); return `<li${i === top ? ' class="top"' : ''}><span>${n}</span><span class="prio-bar"><span style="width:${pct}%"></span></span><span class="prio-pct">${pct}%</span></li>`; }).join('');
+  return `<section class="card brief" id="buyer-brief" aria-label="คำขอซื้อ">
+    <header class="brief-head">
+      <span class="role-icon">${icon('bag')}</span>
+      <div><p class="eyebrow">คำขอซื้อจาก</p><h2>${BUYER}</h2><p class="meta">ร้านอาหาร · เขตปทุมวัน กรุงเทพฯ</p></div>
+    </header>
+    <div class="brief-body">
+      <div><h3>สิ่งที่ผู้ซื้อต้องการ</h3><ul class="needs">${needs.join('')}</ul></div>
+      <div class="brief-prio"><h3>ผู้ซื้อให้ความสำคัญกับ</h3><ul class="prio">${prio}</ul>
+        <p class="hint">ผู้ซื้อจัดอันดับข้อเสนอตามน้ำหนักนี้ ข้อเสนอที่อายุสินค้าไม่ถึง 4 วันจะอยู่ท้ายรายการเสมอ</p></div>
+    </div>
+  </section>`;
+}
+
 function supplierPage() {
   const o = chosen() || s.offers[1];
   const field = (n, l, v, mode) => `<label class="field">${l}<input name="${n}" type="number" inputmode="${mode}" value="${v ?? ''}" required min="${n === 'hours' ? 1 : 0}" max="${n === 'age' ? 7 : 100000}" step="${n === 'price' ? '0.01' : 1}"></label>`;
@@ -225,7 +260,8 @@ function supplierPage() {
     : !s.selected ? `<span class="badge wait">${spinner}รอผู้ซื้อพิจารณา</span>`
     : s.selected === o.id ? badge(true, 'ผู้ซื้อเลือกข้อเสนอนี้') : '<span class="badge">ผู้ซื้อเลือกรายอื่น</span>';
   const next = o.submitted && s.selected === o.id ? `<div class="notice ok next"><p>${BUYER}เลือกข้อเสนอของคุณแล้ว ร่างข้อตกลงพร้อมให้ตรวจ</p>${btn('ไปที่ข้อตกลง', 'page:contract', 'primary')}</div>` : '';
-  return `${heading('ข้อเสนอของคุณ', requestLine(), status)}${next}
+  return `${heading('ข้อเสนอของคุณ', '', status)}${next}
+  ${buyerBrief(o)}
   <div class="split">
     <section class="card pad">
       <h2>${esc(o.name)}</h2>
@@ -734,6 +770,14 @@ app.addEventListener('click', e => {
 });
 
 app.addEventListener('input', e => {
+  const form = e.target.closest('#offer-form');
+  if (form) {
+    const v = Object.fromEntries(new FormData(form));
+    const t = document.createElement('template');
+    t.innerHTML = buyerBrief(chosen() || s.offers[1], v);
+    document.getElementById('buyer-brief').querySelector('.needs').replaceWith(t.content.querySelector('.needs'));
+    return;
+  }
   if (e.target.dataset.weight == null) return;
   const i = +e.target.dataset.weight;
   s.weights[i] = +e.target.value;

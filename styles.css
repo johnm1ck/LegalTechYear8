@@ -460,3 +460,38 @@ dialog.sheet[open]::backdrop { animation: fade-in .3s ease-out both; }
 .notice .waiting { margin: 0; background: rgba(255, 255, 255, .7); color: var(--warn-ink); }
 .notice.next { margin: 0 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .notice.next .btn { background: var(--accent); color: #fff; }
+
+/* ---------- buyer brief (seller side) ---------- */
+.brief { padding: 24px; margin-bottom: 20px; }
+.brief-head { display: flex; gap: 14px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.brief-head .role-icon { margin: 0; background: var(--surface-cream); color: var(--accent); flex: none; }
+.brief-head h2 { font-size: 22px; line-height: 1.3; }
+.brief-head .meta { margin-top: 2px; }
+.eyebrow { font-size: 13px; font-weight: 600; color: var(--accent); }
+.brief-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; padding-top: 18px; }
+.brief-body h3 { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.needs li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.needs li:last-child { border-bottom: 0; }
+.need-mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--fill); color: var(--muted); }
+.need-mark svg { width: 13px; height: 13px; stroke-width: 3; }
+.needs .ok .need-mark { background: var(--success-tint); color: var(--success); }
+.needs .warn .need-mark { background: var(--warn-bg); color: var(--warn-ink); }
+.needs .bad .need-mark { background: var(--bad-bg); color: var(--bad-ink); }
+.need-yours { font-size: 13px; color: var(--muted); text-align: right; white-space: nowrap; }
+.needs .warn .need-yours { color: var(--warn-ink); }
+.needs .bad .need-yours { color: var(--bad-ink); font-weight: 600; }
+.prio { display: grid; gap: 12px; margin: 8px 0 14px; }
+.prio li { display: grid; grid-template-columns: 72px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 14px; }
+.prio-bar { height: 6px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.prio-bar span { display: block; height: 100%; border-radius: inherit; background: var(--muted); transition: width .4s var(--ease, ease); }
+.prio li.top { font-weight: 600; }
+.prio li.top .prio-bar span { background: var(--accent); }
+.prio-pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+@media (max-width: 760px) {
+  .brief { padding: 20px; }
+  .brief-body { grid-template-columns: 1fr; gap: 20px; }
+}
+@media (max-width: 380px) {
+  .needs li { grid-template-columns: 22px minmax(0, 1fr); }
+  .need-yours { grid-column: 2; text-align: left; white-space: normal; }
+}
