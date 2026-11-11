@@ -1,4 +1,4 @@
-import {initialOffers, rank, defaults} from './logic.js';
+import {initialOffers, rank, defaults, criteria} from './logic.js';
 
 /* ---------- helpers ---------- */
 
@@ -21,15 +21,23 @@ const days = n => `${Math.floor(n)} วัน ${Math.round((n % 1) * 24)} ชม
 const btn = (text, action, style = '') => `<button class="btn ${style}" data-action="${action}">${text}</button>`;
 const BUYER = 'ร้านอาหารครัวอุ่นใจ';
 const DOCS = ['ทะเบียนนิติบุคคล', 'เอกสารสถานประกอบการ', 'ผลวิเคราะห์สินค้าตัวอย่าง', 'เอกสารระบบการผลิต'];
-const PRESETS = {balanced: ['สมดุล', defaults], cost: ['ต้นทุน', [75, 10, 5, 10]], fresh: ['ความสด', [15, 65, 10, 10]], speed: ['ความเร็ว', [15, 15, 60, 10]]};
+// Presets set what each improvement is worth in baht; must-haves stay as the buyer set them.
+const PRESETS = {
+  balanced: ['สมดุล', {perDay: 400, perHour: 20, perDoc: 300}],
+  cost: ['ต้นทุน', {perDay: 100, perHour: 5, perDoc: 100}],
+  fresh: ['ความสด', {perDay: 1000, perHour: 20, perDoc: 300}],
+  speed: ['ความเร็ว', {perDay: 400, perHour: 80, perDoc: 300}],
+};
 
 /* ---------- state ---------- */
 
-const fresh = () => ({role: null, page: 'offers', offers: structuredClone(initialOffers), weights: [...defaults], scenario: 'normal', selected: null, version: 1, buyer: false, seller: false, amended: false, revisionNote: '', shipped: false, received: false, issue: false, resolved: false, acceptResolution: false, evidence: null, events: []});
+const fresh = () => ({role: null, page: 'offers', offers: structuredClone(initialOffers), criteria: {...defaults}, scenario: 'normal', selected: null, version: 1, buyer: false, seller: false, amended: false, revisionNote: '', shipped: false, received: false, issue: false, resolved: false, acceptResolution: false, evidence: null, events: []});
 let s;
 try {
   const saved = JSON.parse(localStorage.getItem('supplytrust-v1'));
-  s = saved && typeof saved === 'object' && Array.isArray(saved.offers) && Array.isArray(saved.events) && Array.isArray(saved.weights) ? {...fresh(), ...saved} : fresh();
+  s = saved && typeof saved === 'object' && Array.isArray(saved.offers) && Array.isArray(saved.events) ? {...fresh(), ...saved} : fresh();
+  s.criteria = criteria(s.criteria); // older saves used weights; they fall back to defaults
+  delete s.weights;
 } catch { s = fresh(); }
 try { localStorage.removeItem('supplytrust-theme'); } catch {}
 
@@ -101,7 +109,8 @@ function steps() {
 function heading(title, sub, extra = '') {
   return `<div class="page-head"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${extra ? `<div class="page-actions">${extra}</div>` : ''}</div>`;
 }
-const requestLine = () => 'อกไก่แช่เย็น 100 กก. · ส่งเขตปทุมวัน · อายุเหลืออย่างน้อย 4 วันเมื่อส่งถึง';
+const requestLine = () => `อกไก่แช่เย็น 100 กก. · ส่งเขตปทุมวันภายใน ${s.criteria.maxHours} ชม. · อายุเหลืออย่างน้อย ${s.criteria.minDays} วันเมื่อส่งถึง`;
+const signed = n => (n > 0 ? '−' : '+') + money(Math.abs(n));
 const empty = (title, desc, action, text) => `<section class="card empty"><h2>${title}</h2><p>${desc}</p>${btn(text, action, 'primary')}</section>`;
 const badge = (ok, yes = 'ยืนยันแล้ว', no = 'รอยืนยัน', pop = false) => ok ? `<span class="badge ok${pop ? ' pop' : ''}">${icon('check')}${yes}</span>` : `<span class="badge">${no}</span>`;
 
@@ -132,7 +141,7 @@ const dist = o => o.distance == null ? 'ไม่ทราบระยะทา�
 function tags(o, best) {
   const t = [];
   if (o.id === best?.id) t.push(['rec', 'แนะนำ']);
-  if (!o.eligible) t.push(['bad', 'อายุสินค้าไม่ผ่านเกณฑ์']);
+  o.fails.forEach(f => t.push(['bad', f]));
   if (o.unusual) t.push(['warn', 'ค่าขนส่งต่ำผิดปกติ']);
   if (o.shipping == null) t.push(['warn', 'ยังไม่ระบุค่าขนส่ง']);
   if (o.distance == null) t.push(['warn', 'ไม่ทราบระยะทาง']);
@@ -142,68 +151,106 @@ function tags(o, best) {
 }
 
 function offersPage() {
-  const rows = rank(offersForScenario(), s.weights, s.scenario);
+  const rows = rank(offersForScenario(), s.criteria, s.scenario);
   const best = rows.find(o => o.eligible);
-  const labels = ['ต้นทุนรวมค่าขนส่ง', 'อายุสินค้าเหลือ', 'ระยะเวลาขนส่ง', 'เอกสารที่ตรวจแล้ว'];
+  const c = s.criteria;
+  const num = (k, label, unit, max) => `<label class="crit"><span>${label}</span><span class="crit-input"><input type="number" inputmode="numeric" min="0" max="${max}" step="1" value="${c[k]}" data-crit="${k}" id="crit-${k}"><span>${unit}</span></span></label>`;
   return `${heading('เลือกผู้ขาย', requestLine())}
     ${advice(rows, best)}
     <section class="criteria">
       <div class="criteria-row"><span class="criteria-label">ให้ความสำคัญกับ</span>${presets()}</div>
-      <details class="disclosure" data-panel="tune"${openAttr('tune')}><summary>ปรับน้ำหนักเอง</summary><div class="panel-body">
-        <div class="weights">${labels.map((l, i) => `<div class="weight"><label for="weight${i}"><span>${l}</span><b id="value${i}">${s.weights[i]}</b></label><input id="weight${i}" type="range" min="0" max="100" value="${s.weights[i]}" data-weight="${i}"></div>`).join('')}</div>
-        <p class="hint">ถ้าตั้งทุกด้านเป็น 0 ระบบจะใช้ค่าเริ่มต้น</p>
+      <details class="disclosure" data-panel="tune"${openAttr('tune')}><summary>ปรับเกณฑ์เอง</summary><div class="panel-body">
+        <div class="criteria-grid">
+          <fieldset><legend>ต้องผ่าน</legend><p class="hint">ไม่ผ่านข้อใดข้อหนึ่ง จะไม่จัดอันดับ</p>
+            ${num('minDays', 'อายุสินค้าเหลือเมื่อถึงอย่างน้อย', 'วัน', 7)}
+            ${num('maxHours', 'ส่งถึงภายใน', 'ชม.', 72)}
+            <label class="check"><input type="checkbox" data-crit="allDocs" id="crit-allDocs" ${c.allDocs ? 'checked' : ''}><span>ต้องมีเอกสารตรวจแล้วครบ 4 รายการ</span></label>
+          </fieldset>
+          <fieldset><legend>คุ้มค่ากับคุณเท่าไร</legend><p class="hint">ใช้เทียบข้อเสนอเป็นเงินบาท</p>
+            ${num('perDay', 'สดเพิ่ม 1 วัน มีค่า', 'บาท', 100000)}
+            ${num('perHour', 'ส่งเร็วขึ้น 1 ชั่วโมง มีค่า', 'บาท', 100000)}
+            ${num('perDoc', 'เอกสารขาด 1 รายการ ถือเป็นความเสี่ยง', 'บาท', 100000)}
+          </fieldset>
+        </div>
       </div></details>
     </section>
     ${comparison(rows, best)}
-    <details class="disclosure" data-panel="calc"${openAttr('calc')}><summary>วิธีคำนวณคะแนน</summary><div class="panel-body">
+    <details class="disclosure" data-panel="calc"${openAttr('calc')}><summary>วิธีคำนวณต้นทุนเทียบ</summary><div class="panel-body">
+      <p>ต้นทุนเทียบ = ต้นทุนรวม − (วันที่สดเกินเกณฑ์ × ${money(c.perDay)}) − (ชั่วโมงที่เร็วกว่าเกณฑ์ × ${money(c.perHour)}) + (เอกสารที่ขาด × ${money(c.perDoc)}) ยิ่งต่ำยิ่งคุ้ม</p>
       <p>ต้นทุนรวม = ราคา × 100 กก. + ค่าขนส่ง ค่าขนส่งประมาณ = 500 + ระยะทาง × 10 บาท หากค่าขนส่งที่เสนอต่ำกว่า 70% ของค่าประมาณ จะใช้ค่าประมาณในการจัดอันดับ</p>
-      <p>อายุเหลือ = 7 วัน − อายุเมื่อออกส่ง − ชั่วโมงขนส่ง ÷ 24 ผู้ขายที่อายุสินค้าเหลือต่ำกว่า 4 วันจะอยู่ท้ายรายการเสมอ</p>
+      <p>อายุเหลือ = 7 วัน − อายุเมื่อออกส่ง − ชั่วโมงขนส่ง ÷ 24 ผู้ขายที่ไม่ผ่านเกณฑ์ต้องผ่านจะอยู่ท้ายรายการและไม่จัดอันดับ</p>
       <p>เกณฑ์อุณหภูมิ ระยะเวลาตรวจรับ และรายการเอกสารเป็นตัวอย่าง ต้องให้ผู้เชี่ยวชาญตรวจก่อนใช้จริง</p>
     </div></details>`;
 }
 
 function presets() {
-  return `<div id="presets" class="segmented" data-slider="preset" role="group" aria-label="ชุดน้ำหนัก">${pill}${Object.entries(PRESETS).map(([k, [l, w]]) => `<button data-action="preset:${k}" aria-pressed="${w.every((v, i) => v === s.weights[i])}">${l}</button>`).join('')}</div>`;
+  return `<div id="presets" class="segmented" data-slider="preset" role="group" aria-label="ชุดความคุ้มค่า">${pill}${Object.entries(PRESETS).map(([k, [l, w]]) => `<button data-action="preset:${k}" aria-pressed="${Object.entries(w).every(([key, v]) => s.criteria[key] === v)}">${l}</button>`).join('')}</div>`;
 }
 
 function advice(rows, best) {
   const notes = [];
   const cheap = [...rows].sort((a, b) => a.price - b.price)[0];
-  if (best && cheap && cheap.id !== best.id) notes.push(`${cheap.name} ราคาต่อกิโลกรัมต่ำที่สุด แต่${cheap.eligible ? `ต้นทุนรวมส่งถึง ${baht(cheap.total)} และคะแนนรวมต่ำกว่า` : 'อายุสินค้าเหลือไม่ถึงเกณฑ์'}`);
+  if (best && cheap && cheap.id !== best.id) notes.push(`${cheap.name} ราคาต่อกิโลกรัมต่ำที่สุด แต่${cheap.eligible ? `ต้นทุนรวมส่งถึง ${baht(cheap.total)} และต้นทุนเทียบสูงกว่า` : cheap.fails.join(' · ')}`);
   if (rows.some(o => o.unusual)) notes.push('บางรายเสนอค่าขนส่งต่ำกว่าค่าประมาณมาก ควรขอให้ยืนยันก่อนตกลงราคา');
   if (rows.some(o => !o.terms)) notes.push('บางรายยังไม่ระบุวิธีจัดการกรณีส่งไม่ครบ ต้องตกลงก่อนยืนยันข้อตกลง');
   const newbie = best && rows.find(o => o.new && o.docs >= 3 && o.eligible && o.id !== best.id);
   if (newbie) notes.push(`${newbie.name} เป็นผู้ขายรายใหม่ที่ผ่านเกณฑ์และมีเอกสารตรวจแล้ว ${newbie.docs} รายการ เหมาะกับการทดลองสั่งรอบแรก`);
+  const t = best && tradeOff(rows, best);
+  const tile = (label, value, detail = '', cls = '') => `<div class="eq-tile${cls}"><span class="eq-label">${label}</span><strong class="eq-value">${value}</strong>${detail ? `<span class="eq-detail">${detail}</span>` : ''}</div>`;
+  const op = c => `<span class="eq-op" aria-hidden="true">${c}</span>`;
+  const body = !best
+    ? '<div class="advice-head"><div><p class="advice-title">ยังไม่มีผู้ขายที่ผ่านเกณฑ์ที่ตั้งไว้</p><p class="advice-sub">ลองทบทวนเกณฑ์ต้องผ่าน หรือเปิดรับข้อเสนอรอบใหม่</p></div></div>'
+    : `<div class="advice-head">
+        <div><p class="eyebrow">แนะนำ</p><p class="advice-title">${best.name}</p>
+          <p class="advice-sub">${t ? `เทียบกับ${esc(t.cheap.name)} ซึ่งต้นทุนรวมต่ำที่สุดในผู้ขายที่ผ่านเกณฑ์` : 'ต้นทุนรวมต่ำที่สุดในผู้ขายที่ผ่านเกณฑ์ และคุ้มที่สุดตามค่าที่คุณตั้ง'}</p></div>
+        ${btn(s.selected === best.id ? 'เลือกแล้ว' : 'เลือกผู้ขายรายนี้', 'choose:' + best.id, 'primary')}
+      </div>
+      <div class="equation${t ? '' : ' plain'}">${t
+        ? tile('แพงกว่า', '+' + baht(t.extra)) + op('−') + tile('ได้มูลค่าเพิ่ม', baht(t.worth), t.gains.join('<br>')) + op('=') + tile('คุ้มกว่า', baht(t.better), '', ' win')
+        : tile('ต้นทุนรวมส่งถึง', baht(best.total)) + tile('อายุเหลือเมื่อถึง', days(best.remaining)) + tile('เอกสารตรวจแล้ว', best.docs + '/4')}</div>`;
   return `<section id="advice" class="advice">
-    ${best
-      ? `<p class="advice-title">แนะนำ ${best.name}</p><p>ต้นทุนรวมส่งถึง ${baht(best.total)} · อายุเหลือ ${days(best.remaining)} เมื่อส่งถึง · เอกสารตรวจแล้ว ${best.docs}/4</p>`
-      : '<p class="advice-title">ยังไม่มีผู้ขายที่ผ่านเกณฑ์อายุสินค้า</p><p>ลองทบทวนเงื่อนไข หรือเปิดรับข้อเสนอรอบใหม่</p>'}
-    ${notes.length ? `<ul>${notes.map(n => `<li>${n}</li>`).join('')}</ul>` : ''}
-    <p class="advice-foot">คะแนนช่วยจัดลำดับตามเกณฑ์ที่คุณตั้ง ไม่ใช่การรับรองคุณภาพ คุณเป็นผู้เลือกเอง</p>
+    ${body}
+    ${notes.length ? `<details class="disclosure advice-notes" data-panel="notes"${openAttr('notes')}><summary>ข้อควรรู้ ${notes.length} ข้อ</summary><div class="panel-body"><ul>${notes.map(n => `<li>${n}</li>`).join('')}</ul></div></details>` : ''}
+    <p class="advice-foot">การจัดอันดับใช้ค่าที่คุณตั้ง ไม่ใช่การรับรองคุณภาพ คุณเป็นผู้เลือกเอง</p>
   </section>`;
 }
 
+// Why the recommended offer beats the cheapest eligible one, in baht. Null when it is the cheapest.
+function tradeOff(rows, best) {
+  const cheap = rows.filter(o => o.eligible && o.total != null).sort((a, b) => a.total - b.total || a.id - b.id)[0];
+  if (!cheap || cheap.id === best.id || best.adjusted == null) return null;
+  const gains = [];
+  const dDays = best.remaining - cheap.remaining, dHours = cheap.hours - best.hours, dDocs = best.docs - cheap.docs;
+  if (dDays > 0.04) gains.push('สดกว่า ' + days(dDays));
+  if (dHours > 0) gains.push(`ส่งเร็วกว่า ${dHours} ชม.`);
+  if (dDocs > 0) gains.push(`เอกสารครบกว่า ${dDocs} รายการ`);
+  const worth = (best.freshValue + best.speedValue - best.docRisk) - (cheap.freshValue + cheap.speedValue - cheap.docRisk);
+  return {cheap, gains, extra: best.total - cheap.total, worth, better: cheap.adjusted - best.adjusted};
+}
+
 function comparison(rows, best) {
+  const breakdown = o => [o.freshValue && 'สด ' + signed(o.freshValue), o.speedValue && 'เร็ว ' + signed(o.speedValue), o.docRisk && 'เอกสาร ' + signed(-o.docRisk)].filter(Boolean).map(t => `<span class="nowrap">${t}</span>`).join(' · ');
+  const adj = o => !o.eligible ? '<span class="meta">ไม่จัดอันดับ</span>' : o.adjusted == null ? '<span class="meta">รอข้อมูลขนส่ง</span>' : `<strong class="money"><span data-count="${o.adjusted}">${money(o.adjusted)}</span></strong><span class="meta">${breakdown(o)}</span>`;
   const est = o => o.unusual || o.shipping == null;
   const choose = (o, full = '') => btn(s.selected === o.id ? 'เลือกแล้ว' : full ? 'เลือกผู้ขายรายนี้' : 'เลือก', 'choose:' + o.id, (o.id === best?.id ? 'primary' : 'secondary') + full);
   const freshBar = o => `<span class="fresh-bar${o.eligible ? '' : ' bad'}"><span style="width:${Math.max(0, Math.min(1, o.remaining / 7)) * 100}%"></span></span>`;
   return `<div id="comparison">
     <div class="list-head"><h2>ข้อเสนอ ${rows.length} ราย</h2><span class="hint">${icon('lock')}ข้อเสนอปิดผนึก ผู้ขายไม่เห็นราคาของรายอื่น</span></div>
     <div class="card table-card desktop-offers"><div class="table-wrap"><table>
-      <thead><tr><th>ผู้ขาย</th><th class="num">ต้นทุนรวมส่งถึง</th><th>อายุเหลือเมื่อถึง</th><th class="num">ขนส่ง</th><th>เอกสาร</th><th class="num">คะแนน</th><th><span class="sr-only">การเลือก</span></th></tr></thead>
+      <thead><tr><th>ผู้ขาย</th><th class="num">ต้นทุนรวมส่งถึง</th><th>อายุเหลือเมื่อถึง</th><th class="num">ขนส่ง</th><th>เอกสาร</th><th class="num">ต้นทุนเทียบ</th><th><span class="sr-only">การเลือก</span></th></tr></thead>
       <tbody>${rows.map(o => `<tr data-flip="r${o.id}" class="${o.id === best?.id ? 'recommended' : ''}">
         <td><strong>${o.name}</strong><span class="meta">${o.area} · ${dist(o)}</span>${tags(o, best)}</td>
         <td class="num"><strong class="money">${baht(o.total)}</strong><span class="meta">${money(o.price)} บาท/กก. + ส่ง ${money(o.freight)}${est(o) ? '*' : ''}</span></td>
         <td><span class="${o.eligible ? '' : 'bad-text'}">${days(o.remaining)}</span>${freshBar(o)}</td>
-        <td class="num">${o.hours} ชม.</td>
-        <td><button class="link" data-action="docs:${o.id}">${o.docs}/4 รายการ</button></td>
-        <td class="num"><span class="score" data-count="${o.score.toFixed(0)}">${o.score.toFixed(0)}</span></td>
+        <td class="num nowrap">${o.hours} ชม.</td>
+        <td class="nowrap"><button class="link" data-action="docs:${o.id}">${o.docs}/4</button></td>
+        <td class="num">${adj(o)}</td>
         <td class="num">${choose(o)}</td>
       </tr>`).join('')}</tbody>
     </table></div>
     <p class="table-note">* ค่าขนส่งประมาณ ใช้จัดอันดับเท่านั้น ไม่ใช่ราคาที่ตกลง ผู้ขายต้องยืนยันค่าขนส่งจริงในข้อตกลง</p></div>
     <div class="mobile-offers">${rows.map(o => `<article data-flip="c${o.id}" class="card offer-card${o.id === best?.id ? ' recommended' : ''}">
-      <div class="offer-top"><div><strong class="name">${o.name}</strong><span class="meta">${o.area} · ${dist(o)}</span></div><div class="score-big"><span data-count="${o.score.toFixed(0)}">${o.score.toFixed(0)}</span><small>คะแนน</small></div></div>
+      <div class="offer-top"><div><strong class="name">${o.name}</strong><span class="meta">${o.area} · ${dist(o)}</span></div><div class="score-big">${o.eligible && o.adjusted != null ? `<span data-count="${o.adjusted}">${money(o.adjusted)}</span><small>ต้นทุนเทียบ</small>` : `<small>${o.eligible ? 'รอข้อมูลขนส่ง' : 'ไม่จัดอันดับ'}</small>`}</div></div>
       ${tags(o, best)}
       <dl class="offer-stats">
         <div><dt>ต้นทุนรวมส่งถึง</dt><dd>${baht(o.total)}</dd></div>
@@ -224,21 +271,20 @@ function buyerBrief(o, v = {}) {
   const age = num('age'), hours = num('hours'), shipping = num('shipping');
   const terms = (v.terms ?? (o.terms || o.termsText ? (o.termsText || 'x') : '')).trim();
   const left = age == null || hours == null ? null : 7 - age - hours / 24;
+  const c = s.criteria;
   const mark = st => `<span class="need-mark ${st}" aria-hidden="true">${st === 'ok' ? icon('check') : st === 'bad' || st === 'warn' ? '!' : '·'}</span>`;
   const need = (st, label, yours) => `<li class="${st}">${mark(st)}<span class="need-label">${label}</span><span class="need-yours">${yours}</span></li>`;
   const needs = [
     need('info', 'อกไก่สดแช่เย็น 100 กิโลกรัม', 'ตามคำขอ'),
-    need(hours == null ? 'warn' : 'info', 'ส่งถึงเขตปทุมวัน กรุงเทพฯ', hours == null ? 'ยังไม่ระบุเวลาขนส่ง' : `ของคุณ ${hours} ชม.`),
-    need(left == null ? 'warn' : left >= 4 ? 'ok' : 'bad', 'อายุสินค้าเหลืออย่างน้อย 4 วันเมื่อส่งถึง', left == null ? 'ยังไม่ระบุ' : `ของคุณ ${days(Math.max(0, left))}`),
+    need(hours == null ? 'warn' : hours <= c.maxHours ? 'ok' : 'bad', `ส่งถึงเขตปทุมวันภายใน ${c.maxHours} ชม.`, hours == null ? 'ยังไม่ระบุ' : `ของคุณ ${hours} ชม.`),
+    need(left == null ? 'warn' : left >= c.minDays ? 'ok' : 'bad', `อายุสินค้าเหลืออย่างน้อย ${c.minDays} วันเมื่อส่งถึง`, left == null ? 'ยังไม่ระบุ' : `ของคุณ ${days(Math.max(0, left))}`),
     need('info', 'อุณหภูมิขณะรับไม่เกิน 4 °C', 'ตรวจตอนรับสินค้า'),
     need(shipping == null ? 'warn' : 'ok', 'ระบุค่าขนส่งชัดเจน', shipping == null ? 'ยังไม่ระบุ' : baht(shipping)),
     need(terms ? 'ok' : 'warn', 'มีวิธีแก้ไขกรณีส่งไม่ครบ', terms ? 'ระบุแล้ว' : 'ยังไม่ระบุ'),
-    need(o.docs >= 4 ? 'ok' : 'warn', 'เอกสารประกอบครบ 4 รายการ', `ตรวจแล้ว ${o.docs}/4`),
+    need(o.docs >= 4 ? 'ok' : c.allDocs ? 'bad' : 'warn', c.allDocs ? 'ต้องมีเอกสารครบ 4 รายการ' : 'เอกสารประกอบครบ 4 รายการ', `ตรวจแล้ว ${o.docs}/4`),
   ];
-  const total = s.weights.reduce((a, b) => a + b, 0) || 1;
-  const names = ['ต้นทุนรวม', 'ความสด', 'ความเร็ว', 'เอกสาร'];
-  const top = s.weights.indexOf(Math.max(...s.weights));
-  const prio = names.map((n, i) => { const pct = Math.round(s.weights[i] / total * 100); return `<li${i === top ? ' class="top"' : ''}><span>${n}</span><span class="prio-bar"><span style="width:${pct}%"></span></span><span class="prio-pct">${pct}%</span></li>`; }).join('');
+  const worth = [['สดเพิ่ม 1 วัน', 'ยอมจ่ายเพิ่ม', c.perDay], ['ส่งเร็วขึ้น 1 ชั่วโมง', 'ยอมจ่ายเพิ่ม', c.perHour], ['เอกสารขาด 1 รายการ', 'หักความคุ้มค่า', c.perDoc]]
+    .map(([l, verb, n]) => `<li><span>${l}</span><span>${verb} <b>${money(n)}</b> บาท</span></li>`).join('');
   return `<section class="card brief" id="buyer-brief" aria-label="คำขอซื้อ">
     <header class="brief-head">
       <span class="role-icon">${icon('bag')}</span>
@@ -246,8 +292,8 @@ function buyerBrief(o, v = {}) {
     </header>
     <div class="brief-body">
       <div><h3>สิ่งที่ผู้ซื้อต้องการ</h3><ul class="needs">${needs.join('')}</ul></div>
-      <div class="brief-prio"><h3>ผู้ซื้อให้ความสำคัญกับ</h3><ul class="prio">${prio}</ul>
-        <p class="hint">ผู้ซื้อจัดอันดับข้อเสนอตามน้ำหนักนี้ ข้อเสนอที่อายุสินค้าไม่ถึง 4 วันจะอยู่ท้ายรายการเสมอ</p></div>
+      <div class="brief-prio"><h3>ผู้ซื้อให้ความสำคัญกับ</h3><ul class="worth">${worth}</ul>
+        <p class="hint">ผู้ซื้อเทียบข้อเสนอเป็นเงินบาท: ต้นทุนรวม หักมูลค่าความสดและความเร็วที่เกินเกณฑ์ บวกความเสี่ยงจากเอกสารที่ขาด ข้อเสนอที่ไม่ผ่านเกณฑ์ต้องผ่านจะไม่ถูกจัดอันดับ</p></div>
     </div>
   </section>`;
 }
@@ -295,7 +341,7 @@ function contractPage() {
   if (!o) return heading('ข้อตกลงซื้อขาย') + (s.role === 'seller'
     ? empty('รอผู้ซื้อเลือกข้อเสนอ', 'เมื่อผู้ซื้อเลือกข้อเสนอของคุณ ระบบจะสร้างร่างข้อตกลงให้ตรวจ', 'page:offers', 'ไปที่ข้อเสนอของคุณ')
     : empty('ยังไม่ได้เลือกผู้ขาย', 'เลือกข้อเสนอก่อน ระบบจึงจะสร้างร่างข้อตกลง', 'buyer-offers', 'ไปเลือกผู้ขาย'));
-  const r = rank([o], s.weights, s.scenario)[0];
+  const r = rank([o], s.criteria, s.scenario)[0];
   const shippingConfirmed = (o.shipping != null && !r.unusual) || o.freightConfirmed;
   const terms = o.terms || s.amended;
   const ready = shippingConfirmed && terms;
@@ -303,7 +349,7 @@ function contractPage() {
   const blockers = [];
   if (!shippingConfirmed) blockers.push(`<div class="notice warn"><p>ค่าขนส่งยังไม่ได้ยืนยัน ค่าประมาณ ${baht(r.estimate)} ใช้จัดอันดับเท่านั้น</p>${s.role === 'seller' ? btn('ยืนยันค่าขนส่ง ' + baht(o.shipping), 'freight', 'secondary') : (ui.pendingFreight ? `<span class="waiting">${spinner}รอผู้ขายยืนยันค่าขนส่ง</span>` : btn('ขอให้ผู้ขายยืนยันค่าขนส่ง', 'ask-freight', 'secondary'))}</div>`);
   if (!terms) blockers.push('<div class="notice warn"><p>ข้อ 3 กรณีส่งมอบไม่ครบ ยังไม่ได้ตกลง ใช้ “ขอแก้ไขข้อตกลง” เพื่อเสนอเงื่อนไข</p></div>');
-  if (!r.eligible) blockers.push('<div class="notice bad"><p>อายุสินค้าเหลือต่ำกว่า 4 วัน ไม่ตรงกับคำขอซื้อ ควรตกลงแก้ไขก่อนยืนยัน</p></div>');
+  if (!r.eligible) blockers.push(`<div class="notice bad"><p>${r.fails.join(' · ')} ไม่ตรงกับคำขอซื้อ ควรตกลงแก้ไขก่อนยืนยัน</p></div>`);
   const clause = (h, p) => `<li><h3>${h}</h3><p>${p}</p></li>`;
   return `${heading('ข้อตกลงซื้อขาย', `${esc(o.name)} → ${BUYER}`, btn(icon('download') + 'พิมพ์', 'print', 'secondary'))}
   <div class="split">
@@ -323,7 +369,7 @@ function contractPage() {
       </dl>
       ${blockers.join('')}
       <ol class="clauses">
-        ${clause('การส่งมอบและเกณฑ์ตรวจรับ', `จัดส่งถึงเขตปทุมวัน กรุงเทพฯ ภายใน ${o.hours} ชั่วโมงนับจากเวลาออกส่งที่บันทึก อายุสินค้าเหลือไม่น้อยกว่า 4 วัน และอุณหภูมิขณะรับไม่เกิน 4 °C`)}
+        ${clause('การส่งมอบและเกณฑ์ตรวจรับ', `จัดส่งถึงเขตปทุมวัน กรุงเทพฯ ภายใน ${o.hours} ชั่วโมงนับจากเวลาออกส่งที่บันทึก อายุสินค้าเหลือไม่น้อยกว่า ${s.criteria.minDays} วัน และอุณหภูมิขณะรับไม่เกิน 4 °C`)}
         ${clause('การตรวจรับและแจ้งปัญหา', 'ผู้ซื้อบันทึกน้ำหนัก เลขล็อต อุณหภูมิ และภาพถ่าย และแจ้งปัญหาภายใน 6 ชั่วโมงหลังรับสินค้า การบันทึกว่าสินค้ามาถึงแยกจากการยืนยันผลตรวจรับ')}
         ${clause('กรณีส่งมอบไม่ครบ', terms ? esc(o.termsText || 'ผู้ขายจัดส่งส่วนที่ขาดภายใน 24 ชั่วโมงหลังทั้งสองฝ่ายยืนยันปัญหา โดยผู้ขายรับผิดชอบค่าขนส่งเพิ่มเติม') : '<span class="bad-text">ยังไม่ได้ตกลง</span>')}
         ${clause('ความรับผิดชอบระหว่างขนส่ง', 'ผู้ขายรับผิดชอบความเสียหายระหว่างขนส่งจนกว่าผู้ซื้อจะยืนยันการรับมอบ')}
@@ -344,7 +390,7 @@ function contractPage() {
           : `
           ${ready ? '' : '<p class="hint warn-text">ยังมีเงื่อนไขที่ต้องตกลงก่อนยืนยัน</p>'}
           <label class="check"><input type="checkbox" id="consent" ${!ready ? 'disabled' : ''}><span>ฉันได้อ่านข้อตกลงฉบับที่ ${s.version} และยอมรับเงื่อนไขทั้งหมด</span></label>
-          ${!r.eligible ? '<label class="check"><input type="checkbox" id="risk-consent"><span>รับทราบว่าอายุสินค้าไม่ผ่านเกณฑ์ที่กำหนด</span></label>' : ''}
+          ${!r.eligible ? '<label class="check"><input type="checkbox" id="risk-consent"><span>รับทราบว่าข้อเสนอนี้ไม่ผ่านเกณฑ์ที่กำหนด</span></label>' : ''}
           <button class="btn primary full" data-action="sign" ${!ready ? 'disabled' : ''}>ยืนยันข้อตกลง</button>`}
         <p class="hint">การเลือกผู้ขายยังไม่ใช่การตกลง ทั้งสองฝ่ายต้องยืนยันฉบับเดียวกัน และทุกการแก้ไขจะล้างการยืนยันเดิม</p>
       </section>
@@ -606,7 +652,7 @@ function countTo(el, from, to) {
   const start = performance.now();
   const tick = now => {
     const k = Math.min(1, (now - start) / 450);
-    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    el.textContent = money(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
     if (k < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -717,7 +763,7 @@ app.addEventListener('click', e => {
   if (a === 'page') s.page = v;
   if (a === 'buyer-offers') { s.role = 'buyer'; s.page = 'offers'; }
   if (a === 'reset') { if (!confirm('ล้างข้อมูลและเริ่มเดโมใหม่ทั้งหมดหรือไม่')) return; s = fresh(); ui.open = {}; ui.pendingFreight = false; clearTimeout(reply.timer); reply = {key: null, timer: null}; }
-  if (a === 'preset') s.weights = [...(PRESETS[v] || PRESETS.balanced)[1]];
+  if (a === 'preset') s.criteria = {...s.criteria, ...(PRESETS[v] || PRESETS.balanced)[1]};
   if (a === 'choose') {
     if (s.shipped) { toast('เริ่มส่งมอบแล้ว ต้องเริ่มเดโมใหม่เพื่อเปลี่ยนผู้ขาย'); return; }
     if (s.selected !== Number(v)) { s.selected = Number(v); s.amended = false; revision('สร้างร่างจากข้อเสนอของ ' + chosen().name); }
@@ -778,10 +824,11 @@ app.addEventListener('input', e => {
     document.getElementById('buyer-brief').querySelector('.needs').replaceWith(t.content.querySelector('.needs'));
     return;
   }
-  if (e.target.dataset.weight == null) return;
-  const i = +e.target.dataset.weight;
-  s.weights[i] = +e.target.value;
-  document.getElementById('value' + i).textContent = s.weights[i];
+  const k = e.target.dataset.crit;
+  if (!k) return;
+  if (k === 'allDocs') s.criteria.allDocs = e.target.checked;
+  else if (e.target.value === '' || !(+e.target.value >= 0)) return; // keep the last valid value while typing
+  else s.criteria[k] = Math.min(+e.target.value, +e.target.max || Infinity);
   const flip = measure();
   const prevTitle = document.querySelector('.advice-title')?.textContent;
   const t = document.createElement('template');

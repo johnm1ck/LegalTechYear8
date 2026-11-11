@@ -37,12 +37,19 @@ const sizes = [['iphone', 390, 844], ['ipad', 820, 1180], ['laptop', 1440, 1000]
     await p.locator('.role-card[data-action="role:buyer"]').click();
     await shoot('compare', 'compare');
 
-    // Weights live behind a disclosure.
-    await p.locator('summary', {hasText: 'ปรับน้ำหนักเอง'}).click();
-    await p.locator('#weight0').fill('80');
-    assert.equal(await p.locator('#value0').textContent(), '80');
-    await p.locator('#weight0').fill('10');
-    assert.equal(await p.locator('#value0').textContent(), '10');
+    // Criteria live behind a disclosure; the recommendation explains the trade-off in baht.
+    const eq = await p.locator('.equation').innerText();
+    assert(/300 บาท/.test(eq) && /547 บาท/.test(eq) && /247 บาท/.test(eq), 'value equation tiles');
+    await p.locator('summary', {hasText: 'ปรับเกณฑ์เอง'}).click();
+    await p.locator('#crit-maxHours').fill('9');
+    assert(await p.locator('.tag.bad', {hasText: 'ส่งนานกว่า 9 ชม.'}).first().isVisible(), 'max-hours must-have');
+    await p.locator('#crit-maxHours').fill('24');
+    await p.locator('#crit-perDay').fill('0');
+    await p.locator('#crit-perHour').fill('0');
+    assert.match(await p.locator('.advice-title').textContent(), /พร้อมส่งฟู้ดส์/, 'pure cost picks the cheapest eligible');
+    await p.locator('#crit-perDay').fill('400');
+    await p.locator('#crit-perHour').fill('20');
+    assert.match(await p.locator('.advice-title').textContent(), /สยามเฟรชฟู้ด/);
 
     // Motion: panels stay open across re-renders; the slider pill lines up with the pressed preset.
     await p.locator('[data-action="preset:cost"]').click();
@@ -58,7 +65,7 @@ const sizes = [['iphone', 390, 844], ['ipad', 820, 1180], ['laptop', 1440, 1000]
     // Demo scenarios.
     const scenario = async v => { await p.locator('.demo-menu summary').click(); await p.locator('#scenario').selectOption(v); };
     await scenario('none');
-    assert(await p.getByText('ยังไม่มีผู้ขายที่ผ่านเกณฑ์อายุสินค้า', {exact: true}).isVisible());
+    assert(await p.getByText('ยังไม่มีผู้ขายที่ผ่านเกณฑ์ที่ตั้งไว้', {exact: true}).isVisible());
     await scenario('single');
     assert.equal(await p.locator('tbody tr').count(), 1);
     await scenario('normal');
@@ -86,7 +93,7 @@ const sizes = [['iphone', 390, 844], ['ipad', 820, 1180], ['laptop', 1440, 1000]
     await shoot('evidence', 'delivery');
 
     assert.deepEqual(errors, []);
-    console.log('PASS Firefox: 3 viewport sizes; weights; scenarios; documents; buyer selection; both confirmations; dispatch; shortage; supplier response; mutual resolution; no page errors.');
+    console.log('PASS Firefox: 3 viewport sizes; criteria and baht trade-off; scenarios; documents; buyer selection; both confirmations; dispatch; shortage; supplier response; mutual resolution; no page errors.');
   } finally {
     await browser.close();
   }

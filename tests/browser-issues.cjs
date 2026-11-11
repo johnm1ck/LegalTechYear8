@@ -70,6 +70,7 @@ async function restart(p) {
 
     // 3. Seller document panel follows the selected supplier (Siam Fresh: 4/4).
     await p.locator('[data-action="page:offers"]').first().click();
+    await p.locator('#offer-form').waitFor(); // view transition swaps the page asynchronously
     assert.equal(await p.locator('.docs-list .badge.ok').count(), 4, 'seller docs should be 4/4');
     assert.match(await p.locator('#offer-form textarea[name="terms"]').inputValue(), /24 ชั่วโมง/);
 
