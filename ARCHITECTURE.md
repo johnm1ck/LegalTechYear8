@@ -12,7 +12,7 @@
 - Styling: CSS custom properties, Grid, Flexbox, media queries และ dark-mode class
 - Font: Noto Sans Thai จาก Google Fonts พร้อม Tahoma/sans-serif fallback
 - Icons: SVG path ที่กำหนดในโค้ด ไม่ใช้ icon package
-- Development server: Python standard-library HTTP server ผ่าน npm script
+- Development server: `scripts/serve.mjs` (Node.js built-in `http` ไม่มี dependency) ผ่าน `npm run dev` ใช้ได้ทั้ง Windows, macOS และ Linux
 - Calculation tests: Node.js built-in `node:test` และ `node:assert/strict`
 - Browser tests: Playwright + Firefox เป็นเครื่องมือภายนอก ไม่ได้ประกาศเป็น dependency ใน package.json
 - ไม่มี package dependencies, bundler, compilation หรือ production build step
@@ -22,16 +22,19 @@
 ## 2. โครงสร้างไฟล์
 
 ```text
-supplytrust/                 # Git repository แยกจาก directory แม่
+LegalTechYear8/              # root ของ Git repository
 ├── index.html              # Thai document, stylesheet, #app และ module entry
 ├── app.js                  # state, rendering, events, forms และ demo workflow
 ├── logic.js                # initialOffers, defaults และ pure rank()
 ├── styles.css              # design tokens, layout, responsive, dark และ print
 ├── package.json            # type: module; dev และ test scripts
+├── scripts/
+│   └── serve.mjs           # static server สำหรับ npm run dev (เปลี่ยนพอร์ตด้วย PORT)
 ├── color-reference.png     # สำเนาภาพอ้างอิงสีของผู้ใช้
 ├── tests/
 │   ├── scoring.test.js     # สูตรและ edge cases 6 กรณี
-│   └── browser-firefox.cjs # browser workflow และ screenshots
+│   ├── browser-firefox.cjs # browser workflow และ screenshots
+│   └── browser-issues.cjs  # กรณีอุณหภูมิ/ส่งเกิน/ส่งขาด, ฟอร์มผู้ขาย, state เสีย, การ์ดมือถือ
 ├── screenshots/            # สร้างจาก browser tests; gitignored
 ├── README.md               # วิธีเริ่มและข้อจำกัดโดยย่อ
 ├── CONTEXT.md              # บริบทส่งต่องาน
@@ -40,18 +43,18 @@ supplytrust/                 # Git repository แยกจาก directory แ�
 
 ## 3. วิธีเปิดใช้งาน
 
-ต้องมี Node.js/npm สำหรับคำสั่ง npm และ Python 3 สำหรับ server:
+ต้องมี Node.js 18 ขึ้นไป (ทดสอบกับ v22) ไม่ต้องใช้ Python และไม่ต้อง `npm install`:
 
 ```bash
-cd /home/johnm1ck/Desktop/Temp/LegalTech/supplytrust
 npm run dev
+# เปลี่ยนพอร์ต: PORT=8080 npm run dev (bash) หรือ $env:PORT=8080; npm run dev (PowerShell)
 ```
 
 เปิด `http://localhost:5173` ไม่ต้อง `npm install` สำหรับตัวเว็บ และไม่ควรเปิด index.html ผ่าน file:// เพราะมี ES Module imports
 
 ตัวเว็บเป็น static assets จึงนำไฟล์ไปวางบน static hosting ได้เมื่อได้รับคำขอ ปัจจุบันไม่มี hosting manifest หรือการ deploy
 
-ใน sandbox ของ agent ครั้งก่อน คำสั่งเปิดพอร์ตถูกปฏิเสธด้วย socket permission denied จึงไม่ได้ปล่อย preview server ไว้ อย่าเข้าใจว่าลิงก์ localhost กำลังให้บริการอยู่เสมอ
+server ทำงานเฉพาะขณะที่คำสั่ง `npm run dev` เปิดอยู่ อย่าเข้าใจว่าลิงก์ localhost กำลังให้บริการอยู่เสมอ
 
 ## 4. State และวงจร render
 
@@ -157,17 +160,20 @@ Browser test ต้องมี Playwright และ Firefox ที่เวอ�
 
 ```bash
 node tests/browser-firefox.cjs
+node tests/browser-issues.cjs
 ```
 
-กรณีใช้สิ่งที่ติดตั้งอยู่ในเครื่องเดิม:
+ติดตั้งครั้งแรก (ไม่บันทึกลง package.json): `npm install --no-save playwright` แล้ว `npx playwright install firefox`
+
+หาก Playwright หรือ Firefox ติดตั้งไว้ที่อื่น ให้ชี้ path ด้วย environment variable:
 
 ```bash
-PLAYWRIGHT_MODULE=/home/johnm1ck/.npm/_npx/fd3bca3c548369c0/node_modules/playwright \
-FIREFOX_BIN=/home/johnm1ck/.cache/ms-playwright/firefox-1555/firefox/firefox \
+PLAYWRIGHT_MODULE=<path ไปยัง node_modules/playwright> \
+FIREFOX_BIN=<path ไปยัง firefox executable> \
 node tests/browser-firefox.cjs
 ```
 
-พาธนี้เป็นข้อมูลเฉพาะเครื่อง ไม่ใช่ dependency ที่รับประกันว่าจะมีในเครื่อง agent อื่น `FIREFOX_BIN` ใช้ override executable เมื่อจำเป็น
+`FIREFOX_BIN` ใช้ override executable เมื่อจำเป็นเท่านั้น
 
 สคริปต์ intercept URL `http://supplytrust.test/**` แล้วคืนไฟล์จาก repository จึงทดสอบได้โดยไม่เปิด HTTP listening port URL นี้เป็น origin สมมติภายใน test ไม่ใช่เว็บไซต์ที่ deploy
 
@@ -175,7 +181,7 @@ Screenshots อยู่ใน `screenshots/` และไม่ถูก commit
 
 ## 10. Git และการส่งมอบ
 
-ใช้ repository ภายใน `supplytrust/` หลีกเลี่ยงการทำ Git ใน directory แม่ที่เป็นบริบทงาน
+ทำงาน Git ที่ root ของ repository นี้
 
 ก่อนจบงาน:
 - ตรวจ diff ให้ตรงกับคำขอและไม่รวมไฟล์ชั่วคราวหรือข้อมูลลับ

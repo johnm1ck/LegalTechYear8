@@ -18,9 +18,9 @@ Legal and food-handling terms are illustrative drafts awaiting specialist review
 ## Verification
 - Firefox browser workflow: phone 390×844, tablet 820×1180, laptop 1440×1000. Full journey from comparison to bilateral confirmation, dispatch, shortage report and accepted remedy. Checked overflow, document dialog, weighting and alternative scenarios. These are viewport simulations, not physical-device or Safari certification.
 - `node tests/scoring.test.js`: six calculation and edge-case checks.
-- Optional browser check: install Playwright separately, then run `node tests/browser-firefox.cjs`. Set `PLAYWRIGHT_MODULE` and `FIREFOX_BIN` if using existing local installations. The test serves local assets through browser route interception, without opening a listening port.
+- Optional browser check: install Playwright separately (`npm install --no-save playwright` and `npx playwright install firefox`), then run `node tests/browser-firefox.cjs` and `node tests/browser-issues.cjs` (temperature, over-delivery and shortage disputes, seller form data, corrupted saved state, mobile cards). Set `PLAYWRIGHT_MODULE` and `FIREFOX_BIN` if using existing local installations. The test serves local assets through browser route interception, without opening a listening port.
 - Screenshots are generated in ignored `screenshots/`.
-- Preview server could not start in the agent's restricted execution environment (socket permission denied). Start `npm run dev` in your own terminal to view the site.
+- `npm run dev` uses a dependency-free Node server (`scripts/serve.mjs`), so it works on Windows, macOS and Linux without Python. Set `PORT` to change the port.
 - Uploaded files are represented by metadata only; original file contents are not persisted. Downloaded dispute summaries explicitly state that original attachments must be collected separately.
 
 ## Agent handoff
