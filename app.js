@@ -3,7 +3,6 @@ import {initialOffers, rank, defaults, criteria} from './logic.js';
 /* ---------- helpers ---------- */
 
 const icons = {
-  shield: 'M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z M8.5 12l2.5 2.5 4.5-5',
   arrow: 'M5 12h14m-6-6 6 6-6 6',
   doc: 'M14 2H5v20h14V7l-5-5Z M14 2v6h5 M8 12h8 M8 16h6',
   truck: 'M1 5h13v12H1z M14 9h5l3 4v4h-8 M5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M18 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
@@ -86,7 +85,7 @@ const pill = '<span class="slider-pill" aria-hidden="true"></span>';
 function header() {
   const roles = s.role ? `<div class="segmented" data-slider="role" role="group" aria-label="บทบาทที่ใช้งาน">${pill}${[['buyer', 'ผู้ซื้อ'], ['seller', 'ผู้ขาย']].map(([r, l]) => `<button data-action="role:${r}" aria-pressed="${s.role === r}">${l}</button>`).join('')}</div>` : '';
   return `<header class="header"><div class="header-inner">
-    <button class="brand" data-action="home" aria-label="SupplyTrust กลับหน้าแรก"><span class="brand-mark">${icon('shield')}</span><span class="brand-name">SupplyTrust</span></button>
+    <button class="brand" data-action="home" aria-label="SupplyTrust กลับหน้าแรก"><picture><source media="(max-width: 360px)" srcset="supplytrust-icon.svg"><img class="brand-logo" src="supplytrust-logo.svg" alt=""></picture></button>
     <div class="header-right">${roles}${demoMenu()}</div>
   </div></header>`;
 }
