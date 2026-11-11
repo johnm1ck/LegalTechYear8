@@ -39,7 +39,7 @@
      id="description">A pastel blue and lavender grocery bag shaped like a protective shield, with a white checkmark. A calm, trustworthy identity for supplier and SME deals.</desc>
   <g
      id="grocery-shield"
-     transform="matrix(1.1939422,0,0,1.1586873,-6.151202,-13.196912)">
+     transform="matrix(1.2463066,0,0,1.2515044,-12.859333,-26.1477)">
     <!-- A grocery bag handle, a protective shield silhouette, and a verified deal. -->
     <path
        d="M 76,91 V 67 a 36,36 0 0 1 72,0 v 24"
@@ -53,12 +53,12 @@
        d="m 50,79 h 124 a 14,14 0 0 1 14,15 v 47 c 0,36 -30,61 -69,78 a 17,17 0 0 1 -14,0 C 66,202 36,177 36,141 V 94 A 14,14 0 0 1 50,79 Z"
        fill="#B8DDF2"
        id="path2"
-       style="fill:#d97f76;fill-opacity:1" />
+       style="fill:#b70c33;fill-opacity:1" />
     <path
        d="m 112,79 h 62 a 14,14 0 0 1 14,15 v 47 c 0,36 -30,61 -69,78 a 17,17 0 0 1 -7,1.5 z"
        fill="#C9C3EF"
        id="path3"
-       style="fill:#803137;fill-opacity:1" />
+       style="fill:#e4012d;fill-opacity:1" />
     <path
        d="m 80,142 23,23 42,-46"
        fill="none"

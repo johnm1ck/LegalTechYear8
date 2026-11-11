@@ -52,12 +52,12 @@
        d="M50 79h124a14 14 0 0 1 14 15v47c0 36-30 61-69 78a17 17 0 0 1-14 0c-39-17-69-42-69-78V94a14 14 0 0 1 14-15Z"
        fill="#B8DDF2"
        id="path2"
-       style="fill:#d97f76;fill-opacity:1" />
+       style="fill:#b70c33;fill-opacity:1" />
     <path
        d="M112 79h62a14 14 0 0 1 14 15v47c0 36-30 61-69 78a17 17 0 0 1-7 1.5Z"
        fill="#C9C3EF"
        id="path3"
-       style="fill:#803137;fill-opacity:1" />
+       style="fill:#e4012d;fill-opacity:1" />
     <path
        d="m80 142 23 23 42-46"
        fill="none"
