@@ -1,11 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
-  <title id="title">SupplyTrust app icon</title>
-  <desc id="description">A pastel blue and lavender grocery bag shaped like a protective shield, with a white checkmark. A calm, trustworthy identity for supplier and SME deals.</desc>
-  <g transform="translate(16 0)"><g id="grocery-shield">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
+   role="img"
+   aria-labelledby="title description"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="supplytrust-icon.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="3.390625"
+     inkscape:cx="127.85253"
+     inkscape:cy="128"
+     inkscape:window-width="1920"
+     inkscape:window-height="1126"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <title
+     id="title">SupplyTrust app icon</title>
+  <desc
+     id="description">A pastel blue and lavender grocery bag shaped like a protective shield, with a white checkmark. A calm, trustworthy identity for supplier and SME deals.</desc>
+  <g
+     id="grocery-shield"
+     transform="matrix(1.1939422,0,0,1.1586873,-6.151202,-13.196912)">
     <!-- A grocery bag handle, a protective shield silhouette, and a verified deal. -->
-    <path d="M76 91V67a36 36 0 0 1 72 0v24" fill="none" stroke="#B4A6E5" stroke-width="15" stroke-linecap="round"/>
-    <path d="M50 79h124a14 14 0 0 1 14 15v47c0 36-30 61-69 78a17 17 0 0 1-14 0c-39-17-69-42-69-78V94a14 14 0 0 1 14-15Z" fill="#B8DDF2"/>
-    <path d="M112 79h62a14 14 0 0 1 14 15v47c0 36-30 61-69 78a17 17 0 0 1-7 1.5Z" fill="#C9C3EF"/>
-    <path d="m80 142 23 23 42-46" fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-  </g></g>
+    <path
+       d="M 76,91 V 67 a 36,36 0 0 1 72,0 v 24"
+       fill="none"
+       stroke="#B4A6E5"
+       stroke-width="15"
+       stroke-linecap="round"
+       id="path1"
+       style="stroke:#ffe179;stroke-opacity:1" />
+    <path
+       d="m 50,79 h 124 a 14,14 0 0 1 14,15 v 47 c 0,36 -30,61 -69,78 a 17,17 0 0 1 -14,0 C 66,202 36,177 36,141 V 94 A 14,14 0 0 1 50,79 Z"
+       fill="#B8DDF2"
+       id="path2"
+       style="fill:#d97f76;fill-opacity:1" />
+    <path
+       d="m 112,79 h 62 a 14,14 0 0 1 14,15 v 47 c 0,36 -30,61 -69,78 a 17,17 0 0 1 -7,1.5 z"
+       fill="#C9C3EF"
+       id="path3"
+       style="fill:#803137;fill-opacity:1" />
+    <path
+       d="m 80,142 23,23 42,-46"
+       fill="none"
+       stroke="#FFFFFF"
+       stroke-width="15"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path4"
+       style="stroke:#fff8de;stroke-opacity:1" />
+  </g>
 </svg>
